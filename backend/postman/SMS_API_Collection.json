@@ -1,0 +1,1639 @@
+{
+	"info": {
+		"_postman_id": "sms-api-collection-2024",
+		"name": "SMS API Collection",
+		"description": "Complete API collection for School Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"parent@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\",\n    \"school_id\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.success && jsonData.data.token) {",
+									"        pm.environment.set(\"auth_token\", jsonData.data.token);",
+									"        pm.environment.set(\"user_id\", jsonData.data.user.id);",
+									"        pm.environment.set(\"school_id\", jsonData.data.user.school_id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@school.com\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "logout"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Students",
+			"item": [
+				{
+					"name": "List Students",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/students?school_id={{school_id}}&per_page=15",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "per_page",
+									"value": "15"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "class_id",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Student",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student_number\": \"STU001\",\n    \"first_name\": \"Jane\",\n    \"last_name\": \"Smith\",\n    \"middle_name\": \"Marie\",\n    \"date_of_birth\": \"2010-05-15\",\n    \"gender\": \"female\",\n    \"phone\": \"+233241234567\",\n    \"email\": \"jane.smith@example.com\",\n    \"address\": \"123 Main Street, Accra\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/students?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/students/:id?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students", ":id"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Student",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Jane Updated\",\n    \"phone\": \"+233241234568\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/students/:id?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students", ":id"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Student",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/students/:id?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students", ":id"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student Results",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/students/:id/results?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students", ":id", "results"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student Attendance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/students/:id/attendance?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "students", ":id", "attendance"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Teachers",
+			"item": [
+				{
+					"name": "List Teachers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/teachers?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teachers"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Teacher",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"Dr. Sarah\",\n    \"last_name\": \"Johnson\",\n    \"email\": \"sarah.johnson@school.com\",\n    \"password\": \"password123\",\n    \"staff_number\": \"TCH001\",\n    \"qualification\": \"PhD in Mathematics\",\n    \"specialization\": \"Mathematics, Physics\",\n    \"hire_date\": \"2020-01-15\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/teachers?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teachers"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Teacher",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/teachers/:id?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teachers", ":id"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Teacher Classes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/teachers/:id/classes?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "teachers", ":id", "classes"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Classes",
+			"item": [
+				{
+					"name": "List Classes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/classes?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "classes"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Class",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Form 1A\",\n    \"level\": \"Form 1\",\n    \"section\": \"A\",\n    \"capacity\": 30,\n    \"class_teacher_id\": 1,\n    \"academic_year_id\": 1,\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/classes?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "classes"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Class Students",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/classes/:id/students?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "classes", ":id", "students"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subjects",
+			"item": [
+				{
+					"name": "List Subjects",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/subjects?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "subjects"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Subject",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Mathematics\",\n    \"code\": \"MATH\",\n    \"description\": \"Core Mathematics\",\n    \"is_core\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/subjects?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "subjects"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Attendance",
+			"item": [
+				{
+					"name": "List Attendance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/attendance?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "attendance"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Attendance",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"term_id\": 1,\n    \"class_id\": 1,\n    \"date\": \"2024-01-15\",\n    \"students\": [\n        {\n            \"student_id\": 1,\n            \"status\": \"present\",\n            \"remarks\": null\n        },\n        {\n            \"student_id\": 2,\n            \"status\": \"absent\",\n            \"remarks\": \"Sick\"\n        },\n        {\n            \"student_id\": 3,\n            \"status\": \"late\",\n            \"remarks\": \"Traffic\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/attendance/mark?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "attendance", "mark"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student Attendance",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/attendance/student/:studentId?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "attendance", "student", ":studentId"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							],
+							"variable": [
+								{
+									"key": "studentId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Exams & Assessments",
+			"item": [
+				{
+					"name": "List Exams",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/exams?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "exams"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Exam",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"term_id\": 1,\n    \"class_subject_id\": 1,\n    \"name\": \"Mid-Term Mathematics Exam\",\n    \"total_marks\": 100,\n    \"weight\": 30,\n    \"assessment_date\": \"2024-02-15\",\n    \"due_date\": \"2024-02-20\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/exams?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "exams"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Assessments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/assessments?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "assessments"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Assessment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"term_id\": 1,\n    \"class_subject_id\": 1,\n    \"name\": \"Quiz 1\",\n    \"type\": \"quiz\",\n    \"total_marks\": 20,\n    \"weight\": 10,\n    \"assessment_date\": \"2024-01-20\",\n    \"due_date\": \"2024-01-25\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/assessments?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "assessments"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Results",
+			"item": [
+				{
+					"name": "List Results",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/results?school_id={{school_id}}&assessment_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "results"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "assessment_id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Enter Results",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"assessment_id\": 1,\n    \"total_marks\": 100,\n    \"results\": [\n        {\n            \"student_id\": 1,\n            \"marks_obtained\": 85,\n            \"remarks\": \"Excellent work\"\n        },\n        {\n            \"student_id\": 2,\n            \"marks_obtained\": 72,\n            \"remarks\": \"Good performance\"\n        },\n        {\n            \"student_id\": 3,\n            \"marks_obtained\": 45,\n            \"remarks\": \"Needs improvement\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/results/enter?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "results", "enter"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Student Results",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/results/student/:studentId?school_id={{school_id}}&term_id=1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "results", "student", ":studentId"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								},
+								{
+									"key": "term_id",
+									"value": "1"
+								}
+							],
+							"variable": [
+								{
+									"key": "studentId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Report Cards",
+			"item": [
+				{
+					"name": "Generate Report Card",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student_id\": 1,\n    \"term_id\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/report-cards/generate?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "report-cards", "generate"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Report Card",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/report-cards/student/:studentId/term/:termId?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "report-cards", "student", ":studentId", "term", ":termId"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "studentId",
+									"value": "1"
+								},
+								{
+									"key": "termId",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Terms",
+			"item": [
+				{
+					"name": "List Terms",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/terms?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "terms"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Term",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"academic_year_id\": 1,\n    \"name\": \"First Term\",\n    \"term_number\": 1,\n    \"start_date\": \"2024-01-08\",\n    \"end_date\": \"2024-04-05\",\n    \"grace_period_days\": 7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/terms?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "terms"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Activate Term",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/terms/:id/activate?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "terms", ":id", "activate"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Close Term",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/terms/:id/close?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "terms", ":id", "close"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Academic Years",
+			"item": [
+				{
+					"name": "List Academic Years",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academic-years?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "academic-years"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Academic Year",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"2023/2024 Academic Year\",\n    \"start_date\": \"2023-09-01\",\n    \"end_date\": \"2024-08-31\",\n    \"is_active\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academic-years?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "academic-years"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Parent Portal",
+			"item": [
+				{
+					"name": "Get My Children",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/parent/children?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "parent", "children"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/parent/subscriptions?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "parent", "subscriptions"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Payments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/parent/payments?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "parent", "payments"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subscriptions",
+			"item": [
+				{
+					"name": "List Subscriptions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/subscriptions?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "subscriptions"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "List Payments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/payments?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "payments"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student_id\": 1,\n    \"term_id\": 1,\n    \"amount\": 500.00,\n    \"payment_method\": \"momo\",\n    \"momo_provider\": \"mtn\",\n    \"momo_number\": \"0241234567\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "payments"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verify Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"verified_by\": \"admin\",\n    \"momo_transaction_id\": \"TXN123456789\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/:id/verify?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "payments", ":id", "verify"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Payment Webhook",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"reference\": \"PAY-ABC123XYZ\",\n    \"transaction_id\": \"TXN123456789\",\n    \"status\": \"success\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payments/webhook",
+							"host": ["{{base_url}}"],
+							"path": ["api", "payments", "webhook"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Notifications",
+			"item": [
+				{
+					"name": "List Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/unread?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", "unread"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Notification as Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/:id/read?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", ":id", "read"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Mark All as Read",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/notifications/read-all?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "notifications", "read-all"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Profile",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/profile?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "profile"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{auth_token}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"first_name\": \"John Updated\",\n    \"last_name\": \"Doe Updated\",\n    \"phone\": \"+233241234567\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/profile?school_id={{school_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "profile"],
+							"query": [
+								{
+									"key": "school_id",
+									"value": "{{school_id}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "auth_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "school_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
