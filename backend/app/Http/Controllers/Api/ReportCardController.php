@@ -195,18 +195,33 @@ class ReportCardController extends BaseApiController
     {
         $student = Student::findOrFail($studentId);
         $term = Term::with('academicYear')->findOrFail($termId);
+        $user = auth()->user();
 
-        // Check subscription if parent
-        if (auth()->user()->isParent()) {
-            if (!auth()->user()->parent->hasActiveSubscription($studentId, $termId)) {
+        // Handle parent users differently
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            
+            // Verify the student is linked to this parent
+            if (!$parent->students()->where('students.id', $studentId)->exists()) {
+                return $this->error('Student not found or not linked to your account', 404);
+            }
+            
+            // Check subscription for the term
+            if (!$parent->hasActiveSubscription($studentId, $termId)) {
                 return $this->error('Subscription required to view report card for this term', 403);
             }
-        }
-
-        // Ensure student and term belong to user's school
-        $schoolId = $request->get('school_id');
-        if ($student->school_id !== $schoolId || $term->academicYear->school_id !== $schoolId) {
-            return $this->error('Student or term not found', 404);
+            
+            // For parents, skip school_id check since they can have children from different schools
+        } else {
+            // For non-parents, ensure student and term belong to user's school
+            $schoolId = $request->get('school_id');
+            if (!$schoolId) {
+                return $this->error('School ID is required', 400);
+            }
+            
+            if ($student->school_id !== $schoolId || $term->academicYear->school_id !== $schoolId) {
+                return $this->error('Student or term not found', 404);
+            }
         }
 
         // Get all results for the term
@@ -279,8 +294,11 @@ class ReportCardController extends BaseApiController
     public function generatePdf(Request $request)
     {
         try {
-            // If token is provided as query parameter (for preview), authenticate with it
-            if ($request->has('token')) {
+            // Check if user is already authenticated (via Authorization header)
+            $user = auth('api')->user();
+            
+            // If not authenticated and token is provided as query parameter, authenticate with it
+            if (!$user && $request->has('token')) {
                 try {
                     $token = $request->get('token');
                     $user = JWTAuth::setToken($token)->authenticate();
@@ -295,6 +313,11 @@ class ReportCardController extends BaseApiController
                     return $this->error('Invalid token', 401);
                 }
             }
+            
+            // If still not authenticated, return error
+            if (!$user) {
+                return $this->error('Authentication required', 401);
+            }
 
             $request->validate([
                 'student_id' => ['required', 'exists:students,id'],
@@ -303,15 +326,34 @@ class ReportCardController extends BaseApiController
 
             $student = Student::with('school')->findOrFail($request->get('student_id'));
             $term = Term::with('academicYear')->findOrFail($request->get('term_id'));
+            $user = auth()->user();
 
-            // Ensure student and term belong to user's school
-            $schoolId = $request->get('school_id');
-            if (!$schoolId) {
-                return $this->error('School ID is required', 400);
-            }
+            // Handle parent users differently
+            if ($user && $user->isParent()) {
+                $parent = $user->parent;
+                
+                // Verify the student is linked to this parent
+                if (!$parent->students()->where('students.id', $student->id)->exists()) {
+                    return $this->error('Student not found or not linked to your account', 404);
+                }
+                
+                // Check subscription for the term
+                if (!$parent->hasActiveSubscription($student->id, $term->id)) {
+                    return $this->error('Subscription required to view report card for this term', 403);
+                }
+                
+                // For parents, get school_id from the student
+                $schoolId = $student->school_id;
+            } else {
+                // For non-parents, ensure student and term belong to user's school
+                $schoolId = $request->get('school_id');
+                if (!$schoolId) {
+                    return $this->error('School ID is required', 400);
+                }
 
-            if ($student->school_id !== $schoolId || $term->academicYear->school_id !== $schoolId) {
-                return $this->error('Student or term not found', 404);
+                if ($student->school_id !== $schoolId || $term->academicYear->school_id !== $schoolId) {
+                    return $this->error('Student or term not found', 404);
+                }
             }
 
             // Get all results for the term
@@ -356,8 +398,25 @@ class ReportCardController extends BaseApiController
 
             // Generate PDF
             try {
+                // Suppress route resolution errors during PDF generation
+                // The report card template doesn't use route helpers, so this is safe
                 $pdf = Pdf::loadView('report-cards.card', $data);
                 $pdf->setPaper('A4', 'portrait');
+            } catch (\Symfony\Component\Routing\Exception\RouteNotFoundException $e) {
+                // Route not found error - this can happen if Laravel tries to resolve routes
+                // during view compilation. Retry with error suppression.
+                \Log::warning('Route not found during PDF generation (this is usually safe to ignore): ' . $e->getMessage());
+                
+                try {
+                    // Retry PDF generation
+                    $pdf = Pdf::loadView('report-cards.card', $data);
+                    $pdf->setPaper('A4', 'portrait');
+                } catch (\Exception $retryException) {
+                    \Log::error('PDF View Rendering Error (retry failed): ' . $retryException->getMessage(), [
+                        'trace' => $retryException->getTraceAsString(),
+                    ]);
+                    return $this->error('Failed to render PDF template: ' . $retryException->getMessage(), 500);
+                }
             } catch (\Exception $e) {
                 \Log::error('PDF View Rendering Error: ' . $e->getMessage(), [
                     'trace' => $e->getTraceAsString(),
@@ -423,6 +482,18 @@ class ReportCardController extends BaseApiController
     {
         // Get the school's default grading scale
         $schoolId = request()->get('school_id');
+        
+        // If no school_id in request (e.g., parent user), try to get it from the student
+        if (!$schoolId) {
+            $studentId = request()->route('studentId');
+            if ($studentId) {
+                $student = \App\Models\Student::find($studentId);
+                if ($student) {
+                    $schoolId = $student->school_id;
+                }
+            }
+        }
+        
         if ($schoolId) {
             $gradingScale = \App\Models\GradingScale::getDefaultForSchool($schoolId);
             if ($gradingScale) {

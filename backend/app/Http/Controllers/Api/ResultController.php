@@ -69,11 +69,19 @@ class ResultController extends BaseApiController
     public function studentResults(Request $request, $studentId): JsonResponse
     {
         $student = Student::findOrFail($studentId);
+        $user = auth()->user();
         
-        // Check subscription if parent
-        if (auth()->user()->isParent()) {
+        // Check subscription and parent-child relationship if parent
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            
+            // Verify the student is linked to this parent
+            if (!$parent->students()->where('students.id', $studentId)->exists()) {
+                return $this->error('Student not found or not linked to your account', 404);
+            }
+            
             $termId = $request->get('term_id');
-            if ($termId && !auth()->user()->parent->hasActiveSubscription($studentId, $termId)) {
+            if ($termId && !$parent->hasActiveSubscription($studentId, $termId)) {
                 return $this->error('Subscription required to view results for this term', 403);
             }
         }
@@ -97,10 +105,18 @@ class ResultController extends BaseApiController
     public function studentTermResults(Request $request, $studentId, $termId): JsonResponse
     {
         $student = Student::findOrFail($studentId);
+        $user = auth()->user();
         
-        // Check subscription if parent
-        if (auth()->user()->isParent()) {
-            if (!auth()->user()->parent->hasActiveSubscription($studentId, $termId)) {
+        // Check subscription and parent-child relationship if parent
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            
+            // Verify the student is linked to this parent
+            if (!$parent->students()->where('students.id', $studentId)->exists()) {
+                return $this->error('Student not found or not linked to your account', 404);
+            }
+            
+            if (!$parent->hasActiveSubscription($studentId, $termId)) {
                 return $this->error('Subscription required to view results for this term', 403);
             }
         }

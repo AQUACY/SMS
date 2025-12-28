@@ -161,7 +161,7 @@
               class="full-width"
               size="md"
             />
-            <q-btn
+            <!-- <q-btn
               v-if="!child.has_active_subscription"
               flat
               label="Subscribe"
@@ -170,7 +170,7 @@
               @click.stop="subscribe(child)"
               class="full-width q-mt-sm"
               size="md"
-            />
+            /> -->
           </q-card-actions>
         </q-card>
       </div>

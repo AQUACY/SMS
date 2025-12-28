@@ -25,17 +25,16 @@ class ExcelImportController extends BaseApiController
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set headers
+        // Set headers (Student Number will be auto-generated)
         $headers = [
-            'A1' => 'Student Number',
-            'B1' => 'First Name',
-            'C1' => 'Last Name',
-            'D1' => 'Middle Name',
-            'E1' => 'Date of Birth (YYYY-MM-DD)',
-            'F1' => 'Gender (male/female/other)',
-            'G1' => 'Phone',
-            'H1' => 'Email',
-            'I1' => 'Address',
+            'A1' => 'First Name',
+            'B1' => 'Last Name',
+            'C1' => 'Middle Name',
+            'D1' => 'Date of Birth (YYYY-MM-DD)',
+            'E1' => 'Gender (male/female/other)',
+            'F1' => 'Phone',
+            'G1' => 'Email',
+            'H1' => 'Address',
         ];
 
         foreach ($headers as $cell => $value) {
@@ -43,8 +42,8 @@ class ExcelImportController extends BaseApiController
         }
 
         // Style header row
-        $sheet->getStyle('A1:I1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:I1')->getFill()
+        $sheet->getStyle('A1:H1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:H1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFE0E0E0');
 
@@ -52,23 +51,24 @@ class ExcelImportController extends BaseApiController
         $sheet->getColumnDimension('A')->setWidth(15);
         $sheet->getColumnDimension('B')->setWidth(15);
         $sheet->getColumnDimension('C')->setWidth(15);
-        $sheet->getColumnDimension('D')->setWidth(15);
-        $sheet->getColumnDimension('E')->setWidth(20);
+        $sheet->getColumnDimension('D')->setWidth(20);
+        $sheet->getColumnDimension('E')->setWidth(15);
         $sheet->getColumnDimension('F')->setWidth(15);
-        $sheet->getColumnDimension('G')->setWidth(15);
-        $sheet->getColumnDimension('H')->setWidth(25);
-        $sheet->getColumnDimension('I')->setWidth(30);
+        $sheet->getColumnDimension('G')->setWidth(25);
+        $sheet->getColumnDimension('H')->setWidth(30);
 
         // Add example row
-        $sheet->setCellValue('A2', 'STU001');
-        $sheet->setCellValue('B2', 'John');
-        $sheet->setCellValue('C2', 'Doe');
-        $sheet->setCellValue('D2', 'Michael');
-        $sheet->setCellValue('E2', '2010-05-15');
-        $sheet->setCellValue('F2', 'male');
-        $sheet->setCellValue('G2', '+233241234567');
-        $sheet->setCellValue('H2', 'john.doe@example.com');
-        $sheet->setCellValue('I2', '123 Main Street, Accra');
+        $sheet->setCellValue('A2', 'John');
+        $sheet->setCellValue('B2', 'Doe');
+        $sheet->setCellValue('C2', 'Michael');
+        $sheet->setCellValue('D2', '2010-05-15');
+        $sheet->setCellValue('E2', 'male');
+        $sheet->setCellValue('F2', '+233241234567');
+        $sheet->setCellValue('G2', 'john.doe@example.com');
+        $sheet->setCellValue('H2', '123 Main Street, Accra');
+
+        // Add note about auto-generation
+        $sheet->setCellValue('A4', 'Note: Student numbers will be auto-generated (e.g., SCHOOLCODE-STU001)');
 
         // Freeze header row
         $sheet->freezePane('A2');
@@ -126,23 +126,21 @@ class ExcelImportController extends BaseApiController
                     continue;
                 }
 
-                // Map row data
+                // Map row data (student_number will be auto-generated)
                 $data = [
-                    'student_number' => $row[0] ?? null,
-                    'first_name' => $row[1] ?? null,
-                    'last_name' => $row[2] ?? null,
-                    'middle_name' => $row[3] ?? null,
-                    'date_of_birth' => $row[4] ?? null,
-                    'gender' => strtolower($row[5] ?? ''),
-                    'phone' => $row[6] ?? null,
-                    'email' => $row[7] ?? null,
-                    'address' => $row[8] ?? null,
+                    'first_name' => $row[0] ?? null,
+                    'last_name' => $row[1] ?? null,
+                    'middle_name' => $row[2] ?? null,
+                    'date_of_birth' => $row[3] ?? null,
+                    'gender' => strtolower($row[4] ?? ''),
+                    'phone' => $row[5] ?? null,
+                    'email' => $row[6] ?? null,
+                    'address' => $row[7] ?? null,
                     'school_id' => $schoolId,
                 ];
 
                 // Validate row data
                 $validator = Validator::make($data, [
-                    'student_number' => ['required', 'string', 'max:50', 'unique:students,student_number'],
                     'first_name' => ['required', 'string', 'max:100'],
                     'last_name' => ['required', 'string', 'max:100'],
                     'middle_name' => ['nullable', 'string', 'max:100'],
@@ -158,20 +156,25 @@ class ExcelImportController extends BaseApiController
                     $errorCount++;
                     $errors[] = [
                         'row' => $rowNumber,
-                        'student_number' => $data['student_number'],
+                        'first_name' => $data['first_name'],
+                        'last_name' => $data['last_name'],
                         'errors' => $validator->errors()->all(),
                     ];
                     continue;
                 }
 
                 try {
+                    // Auto-generate student number
+                    $data['student_number'] = Student::generateStudentNumber($schoolId);
+                    
                     Student::create($data);
                     $successCount++;
                 } catch (\Exception $e) {
                     $errorCount++;
                     $errors[] = [
                         'row' => $rowNumber,
-                        'student_number' => $data['student_number'],
+                        'first_name' => $data['first_name'],
+                        'last_name' => $data['last_name'],
                         'errors' => ['Failed to create student: ' . $e->getMessage()],
                     ];
                 }
@@ -210,16 +213,15 @@ class ExcelImportController extends BaseApiController
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set headers
+        // Set headers (Staff Number will be auto-generated)
         $headers = [
             'A1' => 'First Name',
             'B1' => 'Last Name',
             'C1' => 'Email',
             'D1' => 'Password (min 8 chars)',
-            'E1' => 'Staff Number',
-            'F1' => 'Qualification',
-            'G1' => 'Specialization',
-            'H1' => 'Hire Date (YYYY-MM-DD)',
+            'E1' => 'Qualification',
+            'F1' => 'Specialization',
+            'G1' => 'Hire Date (YYYY-MM-DD)',
         ];
 
         foreach ($headers as $cell => $value) {
@@ -227,13 +229,13 @@ class ExcelImportController extends BaseApiController
         }
 
         // Style header row
-        $sheet->getStyle('A1:H1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:H1')->getFill()
+        $sheet->getStyle('A1:G1')->getFont()->setBold(true);
+        $sheet->getStyle('A1:G1')->getFill()
             ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
             ->getStartColor()->setARGB('FFE0E0E0');
 
         // Set column widths
-        foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as $col) {
+        foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G'] as $col) {
             $sheet->getColumnDimension($col)->setWidth(20);
         }
 
@@ -242,10 +244,12 @@ class ExcelImportController extends BaseApiController
         $sheet->setCellValue('B2', 'Johnson');
         $sheet->setCellValue('C2', 'sarah.johnson@school.com');
         $sheet->setCellValue('D2', 'SecurePass123');
-        $sheet->setCellValue('E2', 'TCH001');
-        $sheet->setCellValue('F2', 'PhD in Mathematics');
-        $sheet->setCellValue('G2', 'Mathematics, Physics');
-        $sheet->setCellValue('H2', '2020-01-15');
+        $sheet->setCellValue('E2', 'PhD in Mathematics');
+        $sheet->setCellValue('F2', 'Mathematics, Physics');
+        $sheet->setCellValue('G2', '2020-01-15');
+
+        // Add note about auto-generation
+        $sheet->setCellValue('A4', 'Note: Staff numbers will be auto-generated (e.g., SCHOOLCODE-TEA001)');
 
         $sheet->freezePane('A2');
 
@@ -305,10 +309,9 @@ class ExcelImportController extends BaseApiController
                     'last_name' => $row[1] ?? null,
                     'email' => $row[2] ?? null,
                     'password' => $row[3] ?? null,
-                    'staff_number' => $row[4] ?? null,
-                    'qualification' => $row[5] ?? null,
-                    'specialization' => $row[6] ?? null,
-                    'hire_date' => $row[7] ?? null,
+                    'qualification' => $row[4] ?? null,
+                    'specialization' => $row[5] ?? null,
+                    'hire_date' => $row[6] ?? null,
                     'school_id' => $schoolId,
                 ];
 
@@ -317,7 +320,6 @@ class ExcelImportController extends BaseApiController
                     'last_name' => ['required', 'string', 'max:100'],
                     'email' => ['required', 'email', 'unique:users,email'],
                     'password' => ['required', 'string', 'min:8'],
-                    'staff_number' => ['nullable', 'string', 'max:50'],
                     'qualification' => ['nullable', 'string', 'max:255'],
                     'specialization' => ['nullable', 'string', 'max:255'],
                     'hire_date' => ['nullable', 'date'],
@@ -350,10 +352,13 @@ class ExcelImportController extends BaseApiController
                         $user->roles()->attach($teacherRole->id);
                     }
 
+                    // Auto-generate staff number
+                    $staffNumber = \App\Models\Teacher::generateStaffNumber($schoolId);
+
                     // Create teacher profile
                     \App\Models\Teacher::create([
                         'user_id' => $user->id,
-                        'staff_number' => $data['staff_number'],
+                        'staff_number' => $staffNumber,
                         'qualification' => $data['qualification'],
                         'specialization' => $data['specialization'],
                         'hire_date' => $data['hire_date'],

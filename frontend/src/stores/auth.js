@@ -4,14 +4,18 @@ import { LocalStorage } from 'quasar';
 import { useRouter } from 'vue-router';
 
 export const useAuthStore = defineStore('auth', {
-  state: () => ({
-    user: null,
-    token: LocalStorage.getItem('token') || null,
-    roles: [],
-    isAuthenticated: false,
-    impersonating: false,
-    originalUserId: null,
-  }),
+  state: () => {
+    const token = LocalStorage.getItem('token');
+    return {
+      user: null,
+      token: token,
+      roles: [],
+      // If token exists, we'll check auth status, but don't assume authenticated yet
+      isAuthenticated: false,
+      impersonating: LocalStorage.getItem('impersonating') === 'true' || false,
+      originalUserId: LocalStorage.getItem('original_user_id') || null,
+    };
+  },
 
   getters: {
     /**
@@ -54,6 +58,13 @@ export const useAuthStore = defineStore('auth', {
      */
     isParent: (state) => {
       return state.roles.includes('parent');
+    },
+
+    /**
+     * Check if user is accounts manager
+     */
+    isAccountsManager: (state) => {
+      return state.roles.includes('accounts_manager');
     },
 
     /**
@@ -146,10 +157,8 @@ export const useAuthStore = defineStore('auth', {
       LocalStorage.remove('impersonating');
       LocalStorage.remove('original_user_id');
       
-      // Redirect to login using window.location to avoid router issues
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      // Don't redirect here - let the component/router handle it
+      // This prevents issues with token expiration handling
     },
 
     /**
@@ -193,14 +202,17 @@ export const useAuthStore = defineStore('auth', {
         if (response.success && response.data) {
           this.user = response.data.user;
           this.roles = response.data.roles || [];
+          this.isAuthenticated = true;
           return { success: true };
         }
         
         return { success: false };
       } catch (error) {
-        // If token is invalid, logout
+        // Don't logout here - let the API interceptor handle 401 errors
+        // This prevents premature logout during page refresh
         if (error.response?.status === 401) {
-          this.logout();
+          // Token is invalid, but don't logout yet - let interceptor handle it
+          return { success: false };
         }
         return { success: false };
       }

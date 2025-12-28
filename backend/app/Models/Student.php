@@ -30,6 +30,10 @@ class Student extends Model
         'is_active' => 'boolean',
     ];
 
+    protected $appends = [
+        'full_name',
+    ];
+
     /**
      * Get the school that owns this student
      */

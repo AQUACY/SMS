@@ -25,6 +25,9 @@ class AuthController extends BaseApiController
         $user = auth('api')->user();
         $roles = $user->roles()->pluck('name')->toArray();
 
+        // Load relationships based on user roles
+        $user->load(['teacher', 'parent', 'school']);
+
         return $this->success([
             'user' => $user,
             'token' => $token,
@@ -101,6 +104,9 @@ class AuthController extends BaseApiController
     {
         $user = auth('api')->user();
         $roles = $user->roles()->pluck('name')->toArray();
+
+        // Load relationships based on user roles
+        $user->load(['teacher', 'parent', 'school']);
 
         return $this->success([
             'user' => $user,

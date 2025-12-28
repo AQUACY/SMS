@@ -351,9 +351,39 @@ const routes = [
         meta: { requiresAuth: true, roles: ['parent'] },
       },
       {
-        path: 'parent/payment/:studentId/:termId',
+        path: 'parent/payment/:studentId/:termId?',
         name: 'parent-payment',
         component: () => import('src/pages/parent/PaymentPage.vue'),
+        meta: { requiresAuth: true, roles: ['parent'] },
+      },
+      {
+        path: 'parent/verify-payment',
+        name: 'parent-verify-payment',
+        component: () => import('src/pages/parent/VerifyPaymentPage.vue'),
+        meta: { requiresAuth: true, roles: ['parent'] },
+      },
+      {
+        path: 'parent/children/:id/attendance',
+        name: 'parent-child-attendance',
+        component: () => import('src/pages/parent/ChildAttendancePage.vue'),
+        meta: { requiresAuth: true, roles: ['parent'] },
+      },
+      {
+        path: 'parent/children/:id/results',
+        name: 'parent-child-results',
+        component: () => import('src/pages/parent/ChildResultsPage.vue'),
+        meta: { requiresAuth: true, roles: ['parent'] },
+      },
+      {
+        path: 'parent/children/:id/report-cards',
+        name: 'parent-child-report-cards',
+        component: () => import('src/pages/parent/ChildReportCardsPage.vue'),
+        meta: { requiresAuth: true, roles: ['parent'] },
+      },
+      {
+        path: 'parent/children/:id/assessments',
+        name: 'parent-child-assessments',
+        component: () => import('src/pages/parent/ChildAssessmentsPage.vue'),
         meta: { requiresAuth: true, roles: ['parent'] },
       },
 
@@ -368,13 +398,61 @@ const routes = [
         path: 'payments',
         name: 'payments',
         component: () => import('src/pages/payments/PaymentsListPage.vue'),
-        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin'] },
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin', 'accounts_manager'] },
       },
       {
         path: 'payments/:id',
         name: 'payment-detail',
         component: () => import('src/pages/payments/PaymentDetailPage.vue'),
-        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin'] },
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin', 'accounts_manager'] },
+      },
+      
+      // Fees Management Module (Admin)
+      {
+        path: 'fees',
+        name: 'fees',
+        component: () => import('src/pages/fees/FeesListPage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin', 'accounts_manager'] },
+      },
+      
+      // User Management Module (School Admin only)
+      {
+        path: 'users',
+        name: 'users',
+        component: () => import('src/pages/users/UsersListPage.vue'),
+        meta: { requiresAuth: true, roles: ['school_admin'] },
+      },
+      {
+        path: 'fees/create',
+        name: 'fees-create',
+        component: () => import('src/pages/fees/FeeCreatePage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin', 'accounts_manager'] },
+      },
+      {
+        path: 'fees/:id/edit',
+        name: 'fees-edit',
+        component: () => import('src/pages/fees/FeeCreatePage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin', 'accounts_manager'] },
+      },
+      
+      // Subscription Prices Management (Super Admin only)
+      {
+        path: 'subscription-prices',
+        name: 'subscription-prices',
+        component: () => import('src/pages/subscription-prices/SubscriptionPricesListPage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin'] },
+      },
+      {
+        path: 'subscription-prices/create',
+        name: 'subscription-prices-create',
+        component: () => import('src/pages/subscription-prices/SubscriptionPriceCreatePage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin'] },
+      },
+      {
+        path: 'subscription-prices/:id/edit',
+        name: 'subscription-prices-edit',
+        component: () => import('src/pages/subscription-prices/SubscriptionPriceCreatePage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin'] },
       },
 
       // Notifications Module

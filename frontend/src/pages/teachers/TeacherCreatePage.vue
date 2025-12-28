@@ -63,13 +63,12 @@
                 :disable="saving"
               />
 
-              <q-input
-                v-model="teacherForm.staff_number"
-                label="Staff Number"
-                outlined
-                hint="Unique identifier for the teacher"
-                :disable="saving"
-              />
+              <q-banner rounded class="bg-info text-white q-mt-md">
+                <template v-slot:avatar>
+                  <q-icon name="info" />
+                </template>
+                Staff number will be auto-generated based on your school code (e.g., B12-TEA001)
+              </q-banner>
             </div>
 
             <!-- Right Column -->
@@ -139,7 +138,6 @@ const teacherForm = ref({
   last_name: '',
   email: '',
   password: '',
-  staff_number: '',
   qualification: '',
   specialization: '',
   hire_date: '',

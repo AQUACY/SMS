@@ -77,6 +77,23 @@ class ExamController extends BaseApiController
             return $this->error('Exam not found', 404);
         }
 
+        $user = auth()->user();
+
+        // Prevent editing finalized exams (unless explicitly finalizing)
+        if ($exam->is_finalized && !$request->has('is_finalized')) {
+            return $this->error('Cannot update a finalized exam. It has already been verified.', 403);
+        }
+
+        // Check if term allows modifications
+        if (!$exam->term->allowsNewAssessments()) {
+            return $this->error("Cannot update exam. Term status is '{$exam->term->status}'.", 403);
+        }
+
+        // Teachers can only edit their own exams
+        if ($user->isTeacher() && $exam->teacher_id !== $user->teacher->id && !$user->isSchoolAdmin() && !$user->isSuperAdmin()) {
+            return $this->error('You can only edit exams that you created.', 403);
+        }
+
         $exam->update($request->validated());
         $exam->load(['term', 'classSubject.subject', 'classSubject.class', 'teacher.user']);
 
@@ -90,6 +107,23 @@ class ExamController extends BaseApiController
     {
         if ($exam->type !== 'exam') {
             return $this->error('Exam not found', 404);
+        }
+
+        $user = auth()->user();
+
+        // Prevent deleting finalized exams
+        if ($exam->is_finalized) {
+            return $this->error('Cannot delete a finalized exam. It has already been verified.', 403);
+        }
+
+        // Check if term allows deletion
+        if (!$exam->term->allowsNewAssessments()) {
+            return $this->error("Cannot delete exam. Term status is '{$exam->term->status}'.", 403);
+        }
+
+        // Teachers can only delete their own exams
+        if ($user->isTeacher() && $exam->teacher_id !== $user->teacher->id && !$user->isSchoolAdmin() && !$user->isSuperAdmin()) {
+            return $this->error('You can only delete exams that you created.', 403);
         }
 
         $exam->delete();

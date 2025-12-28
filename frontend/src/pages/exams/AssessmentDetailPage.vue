@@ -20,7 +20,16 @@
       </div>
       <q-space />
       <q-btn
-        v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit"
+        v-if="assessment && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !assessment.is_finalized && canEdit"
+        color="positive"
+        label="Finalize"
+        icon="check_circle"
+        unelevated
+        @click="finalizeAssessment"
+        class="q-mr-sm"
+      />
+      <q-btn
+        v-if="assessment && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !assessment.is_finalized && canEdit"
         color="primary"
         label="Edit"
         icon="edit"
@@ -29,7 +38,7 @@
         class="q-mr-sm"
       />
       <q-btn
-        v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit"
+        v-if="assessment && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !assessment.is_finalized && canEdit"
         color="negative"
         label="Delete"
         icon="delete"
@@ -94,6 +103,16 @@
               <div class="col-12 col-md-6" v-if="assessment.due_date">
                 <div class="text-caption text-grey-7">Due Date</div>
                 <div class="text-body1">{{ formatDate(assessment.due_date) }}</div>
+              </div>
+              <div class="col-12 col-md-6">
+                <div class="text-caption text-grey-7">Status</div>
+                <div class="text-body1">
+                  <q-badge
+                    :color="assessment.is_finalized ? 'positive' : 'warning'"
+                    :label="assessment.is_finalized ? 'Finalized' : 'Pending'"
+                    size="md"
+                  />
+                </div>
               </div>
             </div>
           </q-card-section>
@@ -202,6 +221,127 @@
         </q-card>
       </div>
     </div>
+
+    <!-- Edit Dialog -->
+    <q-dialog 
+      v-model="showEditDialog" 
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="edit-dialog-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Assessment</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="showEditDialog = false" />
+        </q-card-section>
+
+        <q-card-section class="q-pt-md">
+          <q-form @submit="saveEdit" class="q-gutter-md">
+            <q-select
+              v-model="editForm.type"
+              :options="typeOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              label="Assessment Type *"
+              outlined
+              dense
+              :rules="[(val) => !!val || 'Assessment type is required']"
+            />
+
+            <q-input
+              v-model="editForm.name"
+              label="Assessment Name *"
+              outlined
+              dense
+              :rules="[(val) => !!val || 'Assessment name is required']"
+            />
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="editForm.total_marks"
+                  label="Marks *"
+                  type="number"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => val !== null && val !== '' || 'Total marks is required',
+                    (val) => val > 0 || 'Total marks must be greater than 0',
+                    (val) => val <= 999.99 || 'Total marks cannot exceed 999.99',
+                  ]"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="editForm.weight"
+                  label="Weight (%) *"
+                  type="number"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => val !== null && val !== '' || 'Weight is required',
+                    (val) => val >= 0 || 'Weight cannot be negative',
+                    (val) => val <= 100 || 'Weight cannot exceed 100%',
+                  ]"
+                />
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="editForm.assessment_date"
+                  label="Assessment Date *"
+                  type="date"
+                  outlined
+                  dense
+                  :rules="[(val) => !!val || 'Assessment date is required']"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="editForm.due_date"
+                  label="Due Date"
+                  type="date"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => !val || !editForm.assessment_date || val >= editForm.assessment_date || 'Due date must be on or after assessment date',
+                  ]"
+                />
+              </div>
+            </div>
+
+            <div class="row q-mt-md q-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-btn
+                  flat
+                  label="Cancel"
+                  color="grey-7"
+                  class="full-width"
+                  @click="showEditDialog = false"
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-btn
+                  type="submit"
+                  color="primary"
+                  label="Save Changes"
+                  unelevated
+                  class="full-width"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 
   <q-page v-else class="q-pa-lg flex flex-center">
@@ -233,8 +373,30 @@ const resultColumns = [
 ];
 
 const canEdit = computed(() => {
-  if (!assessment.value?.term) return false;
-  return assessment.value.term.status === 'draft' || assessment.value.term.status === 'active';
+  if (!assessment.value) return false;
+  
+  // Admins can always edit (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    return !assessment.value.is_finalized;
+  }
+  
+  // For teachers, check ownership and other conditions
+  if (authStore.isTeacher) {
+    // Cannot edit if assessment is finalized
+    if (assessment.value.is_finalized) return false;
+    
+    // Check if term allows editing
+    if (!assessment.value.term) return false;
+    const termStatus = assessment.value.term.status;
+    const termAllowsEdit = termStatus === 'draft' || termStatus === 'active';
+    if (!termAllowsEdit) return false;
+    
+    // Teachers can only edit their own assessments
+    const teacherId = authStore.user?.teacher?.id;
+    return assessment.value.teacher_id === teacherId;
+  }
+  
+  return false;
 });
 
 onMounted(() => {
@@ -273,12 +435,108 @@ async function fetchResults() {
   }
 }
 
+const showEditDialog = ref(false);
+const editForm = ref({
+  name: '',
+  type: null,
+  total_marks: null,
+  weight: null,
+  assessment_date: '',
+  due_date: '',
+});
+
+const typeOptions = [
+  { label: 'Exam', value: 'exam' },
+  { label: 'Quiz', value: 'quiz' },
+  { label: 'Assignment', value: 'assignment' },
+  { label: 'Project', value: 'project' },
+  { label: 'Other', value: 'other' },
+];
+
 function editAssessment() {
-  // For now, navigate to edit - can be implemented later
-  $q.notify({
-    type: 'info',
-    message: 'Edit functionality coming soon',
-    position: 'top',
+  if (!assessment.value) return;
+  
+  // Populate edit form with current assessment data
+  editForm.value = {
+    name: assessment.value.name || '',
+    type: assessment.value.type || null,
+    total_marks: assessment.value.total_marks || null,
+    weight: assessment.value.weight || null,
+    assessment_date: assessment.value.assessment_date ? formatDateForInput(assessment.value.assessment_date) : '',
+    due_date: assessment.value.due_date ? formatDateForInput(assessment.value.due_date) : '',
+  };
+  
+  showEditDialog.value = true;
+}
+
+async function saveEdit() {
+  try {
+    const response = await api.put(`/assessments/${assessment.value.id}`, editForm.value);
+    if (response.data.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Assessment updated successfully',
+        position: 'top',
+      });
+      showEditDialog.value = false;
+      // Refresh assessment data
+      await fetchAssessment();
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to update assessment',
+      position: 'top',
+    });
+  }
+}
+
+function formatDateForInput(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function finalizeAssessment() {
+  $q.dialog({
+    title: 'Finalize Assessment',
+    message: `Are you sure you want to finalize the assessment "${assessment.value.name}"? Once finalized, you won't be able to edit it.`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Finalize',
+      color: 'positive',
+      flat: true,
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+    },
+  }).onOk(async () => {
+    try {
+      const response = await api.put(`/assessments/${assessment.value.id}`, {
+        is_finalized: true,
+      });
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Assessment finalized successfully',
+          position: 'top',
+        });
+        // Refresh assessment data
+        await fetchAssessment();
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to finalize assessment',
+        position: 'top',
+      });
+    }
   });
 }
 
@@ -383,6 +641,22 @@ function getGradeColor(grade) {
   border: 1px solid rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.9);
+}
+
+.edit-dialog-card {
+  width: 100%;
+  max-width: 600px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .edit-dialog-card {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
 }
 </style>
 

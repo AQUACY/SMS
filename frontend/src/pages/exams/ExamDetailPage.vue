@@ -15,7 +15,16 @@
       </div>
       <q-space />
       <q-btn
-        v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit"
+        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
+        color="positive"
+        label="Verify"
+        icon="check_circle"
+        unelevated
+        @click="verifyExam"
+        class="q-mr-sm"
+      />
+      <q-btn
+        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
         color="primary"
         label="Edit"
         icon="edit"
@@ -24,7 +33,7 @@
         class="q-mr-sm"
       />
       <q-btn
-        v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit"
+        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
         color="negative"
         label="Delete"
         icon="delete"
@@ -179,6 +188,114 @@
         </q-card>
       </div>
     </div>
+
+    <!-- Edit Dialog -->
+    <q-dialog 
+      v-model="showEditDialog" 
+      persistent
+      :maximized="$q.screen.lt.sm"
+      transition-show="slide-up"
+      transition-hide="slide-down"
+    >
+      <q-card class="edit-dialog-card">
+        <q-card-section class="row items-center q-pb-none">
+          <div class="text-h6">Exam</div>
+          <q-space />
+          <q-btn icon="close" flat round dense @click="showEditDialog = false" />
+        </q-card-section>
+
+        <q-card-section class="q-pt-md">
+          <q-form @submit="saveEdit" class="q-gutter-md">
+            <q-input
+              v-model="editForm.name"
+              label="Exam Name *"
+              outlined
+              dense
+              :rules="[(val) => !!val || 'Exam name is required']"
+            />
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="editForm.total_marks"
+                  label="Marks *"
+                  type="number"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => val !== null && val !== '' || 'Total marks is required',
+                    (val) => val > 0 || 'Total marks must be greater than 0',
+                    (val) => val <= 999.99 || 'Total marks cannot exceed 999.99',
+                  ]"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model.number="editForm.weight"
+                  label="Weight (%) *"
+                  type="number"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => val !== null && val !== '' || 'Weight is required',
+                    (val) => val >= 0 || 'Weight cannot be negative',
+                    (val) => val <= 100 || 'Weight cannot exceed 100%',
+                  ]"
+                />
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="editForm.assessment_date"
+                  label="Exam Date *"
+                  type="date"
+                  outlined
+                  dense
+                  :rules="[(val) => !!val || 'Exam date is required']"
+                />
+              </div>
+
+              <div class="col-12 col-sm-6">
+                <q-input
+                  v-model="editForm.due_date"
+                  label="Due Date"
+                  type="date"
+                  outlined
+                  dense
+                  :rules="[
+                    (val) => !val || !editForm.assessment_date || val >= editForm.assessment_date || 'Due date must be on or after exam date',
+                  ]"
+                />
+              </div>
+            </div>
+
+            <div class="row q-mt-md q-gutter-sm">
+              <div class="col-12 col-sm-6">
+                <q-btn
+                  flat
+                  label="Cancel"
+                  color="grey-7"
+                  class="full-width"
+                  @click="showEditDialog = false"
+                />
+              </div>
+              <div class="col-12 col-sm-6">
+                <q-btn
+                  type="submit"
+                  color="primary"
+                  label="Save Changes"
+                  unelevated
+                  class="full-width"
+                />
+              </div>
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
   </q-page>
 
   <q-page v-else class="q-pa-lg flex flex-center">
@@ -210,11 +327,38 @@ const resultColumns = [
 ];
 
 const canEdit = computed(() => {
-  if (!exam.value?.term) return false;
-  return exam.value.term.status === 'draft' || exam.value.term.status === 'active';
+  if (!exam.value) return false;
+  
+  // Admins can always edit (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    return !exam.value.is_finalized;
+  }
+  
+  // For teachers, check ownership and other conditions
+  if (authStore.isTeacher) {
+    // Cannot edit if exam is finalized
+    if (exam.value.is_finalized) return false;
+    
+    // Check if term allows editing
+    if (!exam.value.term) return false;
+    const termStatus = exam.value.term.status;
+    const termAllowsEdit = termStatus === 'draft' || termStatus === 'active';
+    if (!termAllowsEdit) return false;
+    
+    // Teachers can only edit their own exams
+    const teacherId = authStore.user?.teacher?.id;
+    return exam.value.teacher_id === teacherId;
+  }
+  
+  return false;
 });
 
-onMounted(() => {
+onMounted(async () => {
+  // If user is a teacher but teacher relationship is missing, refresh user data
+  if (authStore.isTeacher && !authStore.user?.teacher) {
+    await authStore.fetchUser();
+  }
+  
   fetchExam();
   fetchResults();
 });
@@ -250,12 +394,98 @@ async function fetchResults() {
   }
 }
 
+const showEditDialog = ref(false);
+const editForm = ref({
+  name: '',
+  total_marks: null,
+  weight: null,
+  assessment_date: '',
+  due_date: '',
+});
+
 function editExam() {
-  // For now, navigate to edit - can be implemented later
-  $q.notify({
-    type: 'info',
-    message: 'Edit functionality coming soon',
-    position: 'top',
+  if (!exam.value) return;
+  
+  // Populate edit form with current exam data
+  editForm.value = {
+    name: exam.value.name || '',
+    total_marks: exam.value.total_marks || null,
+    weight: exam.value.weight || null,
+    assessment_date: exam.value.assessment_date ? formatDateForInput(exam.value.assessment_date) : '',
+    due_date: exam.value.due_date ? formatDateForInput(exam.value.due_date) : '',
+  };
+  
+  showEditDialog.value = true;
+}
+
+async function saveEdit() {
+  try {
+    const response = await api.put(`/exams/${exam.value.id}`, editForm.value);
+    if (response.data.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Exam updated successfully',
+        position: 'top',
+      });
+      showEditDialog.value = false;
+      // Refresh exam data
+      await fetchExam();
+    }
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to update exam',
+      position: 'top',
+    });
+  }
+}
+
+function formatDateForInput(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function verifyExam() {
+  $q.dialog({
+    title: 'Verify Exam',
+    message: `Are you sure you want to verify the exam "${exam.value.name}"? Once verified, you won't be able to edit it.`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Verify',
+      color: 'positive',
+      flat: true,
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+    },
+  }).onOk(async () => {
+    try {
+      const response = await api.put(`/exams/${exam.value.id}`, {
+        is_finalized: true,
+      });
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Exam verified successfully',
+          position: 'top',
+        });
+        // Refresh exam data
+        await fetchExam();
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to verify exam',
+        position: 'top',
+      });
+    }
   });
 }
 
@@ -339,5 +569,21 @@ function getGradeColor(grade) {
   border: 1px solid rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.9);
+}
+
+.edit-dialog-card {
+  width: 100%;
+  max-width: 600px;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .edit-dialog-card {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+  }
 }
 </style>

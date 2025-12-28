@@ -120,6 +120,15 @@
             </q-td>
           </template>
 
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-badge
+                :color="props.row.is_finalized ? 'positive' : 'warning'"
+                :label="props.row.is_finalized ? 'Finalized' : 'Pending'"
+              />
+            </q-td>
+          </template>
+
           <template v-slot:body-cell-teacher="props">
             <q-td :props="props">
               <div v-if="props.row.teacher?.user">
@@ -140,22 +149,37 @@
                 class="q-mr-xs"
               />
               <q-btn
-                v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit(props.row)"
+                v-if="showActionButtons(props.row, 'finalize')"
+                flat
+                dense
+                icon="check_circle"
+                color="positive"
+                @click="finalizeAssessment(props.row)"
+                class="q-mr-xs"
+              >
+                <q-tooltip>Finalize Assessment</q-tooltip>
+              </q-btn>
+              <q-btn
+                v-if="showActionButtons(props.row, 'edit')"
                 flat
                 dense
                 icon="edit"
                 color="primary"
                 @click="editAssessment(props.row.id)"
                 class="q-mr-xs"
-              />
+              >
+                <q-tooltip>Edit Assessment</q-tooltip>
+              </q-btn>
               <q-btn
-                v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit(props.row)"
+                v-if="showActionButtons(props.row, 'delete')"
                 flat
                 dense
                 icon="delete"
                 color="negative"
                 @click="deleteAssessment(props.row)"
-              />
+              >
+                <q-tooltip>Delete Assessment</q-tooltip>
+              </q-btn>
             </q-td>
           </template>
         </q-table>
@@ -206,11 +230,28 @@ const columns = [
   { name: 'class_subject', label: 'Subject / Class', field: 'class_subject', align: 'left' },
   { name: 'term', label: 'Term / Date', field: 'term', align: 'left' },
   { name: 'marks', label: 'Marks / Weight', field: 'marks', align: 'left' },
+  { name: 'status', label: 'Status', field: 'is_finalized', align: 'center' },
   { name: 'teacher', label: 'Teacher', field: 'teacher', align: 'left' },
   { name: 'actions', label: 'Actions', field: 'actions', align: 'right' },
 ];
 
-onMounted(() => {
+onMounted(async () => {
+  // Debug: Log auth state on mount
+  console.log('AssessmentsListPage mounted. Auth state:', {
+    isAuthenticated: authStore.isAuthenticated,
+    isTeacher: authStore.isTeacher,
+    isSchoolAdmin: authStore.isSchoolAdmin,
+    isSuperAdmin: authStore.isSuperAdmin,
+    roles: authStore.roles,
+    user: authStore.user,
+  });
+  
+  // If user is a teacher but teacher relationship is missing, refresh user data
+  if (authStore.isTeacher && !authStore.user?.teacher) {
+    console.log('Teacher relationship missing, refreshing user data...');
+    await authStore.fetchUser();
+  }
+  
   fetchTerms();
   fetchClasses();
   fetchAssessments();
@@ -305,13 +346,119 @@ function viewAssessment(id) {
 }
 
 function editAssessment(id) {
-  // For now, navigate to detail page - edit can be added later
   router.push(`/app/assessments/${id}`);
 }
 
+function showActionButtons(assessment, action) {
+  // Debug: Log user roles
+  const userRoles = {
+    isTeacher: authStore.isTeacher,
+    isSchoolAdmin: authStore.isSchoolAdmin,
+    isSuperAdmin: authStore.isSuperAdmin,
+    roles: authStore.roles,
+    teacherId: authStore.user?.teacher?.id,
+  };
+  
+  // Basic permission check
+  const hasPermission = authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin;
+  if (!hasPermission) {
+    console.log(`[${action}] No permission:`, userRoles);
+    return false;
+  }
+  
+  // Cannot perform actions on finalized assessments (except view)
+  if (assessment.is_finalized && action !== 'view') {
+    console.log(`[${action}] Assessment is finalized`);
+    return false;
+  }
+  
+  // For finalize action, must not be finalized
+  if (action === 'finalize' && assessment.is_finalized) {
+    console.log(`[${action}] Cannot finalize already finalized assessment`);
+    return false;
+  }
+  
+  // Admins can always see buttons (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    console.log(`[${action}] Admin access granted`);
+    return true;
+  }
+  
+  // For teachers, check ownership
+  if (authStore.isTeacher) {
+    const teacherId = authStore.user?.teacher?.id;
+    const canEditOwn = assessment.teacher_id === teacherId;
+    console.log(`[${action}] Teacher check:`, { teacherId, assessmentTeacherId: assessment.teacher_id, canEditOwn });
+    return canEditOwn;
+  }
+  
+  console.log(`[${action}] No access`);
+  return false;
+}
+
 function canEdit(assessment) {
-  // Can only edit if term allows new assessments
-  return assessment.term?.status === 'draft' || assessment.term?.status === 'active';
+  // Cannot edit if assessment is finalized
+  if (assessment.is_finalized) return false;
+  
+  // Admins can always edit (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    return true;
+  }
+  
+  // For teachers, check ownership and term status
+  if (authStore.isTeacher) {
+    // Check if term allows editing (if term exists)
+    if (assessment.term) {
+      const termAllowsEdit = assessment.term.status === 'draft' || assessment.term.status === 'active';
+      if (!termAllowsEdit) return false;
+    }
+    
+    // Teachers can only edit their own assessments
+    const teacherId = authStore.user?.teacher?.id;
+    return assessment.teacher_id === teacherId;
+  }
+  
+  return false;
+}
+
+async function finalizeAssessment(assessment) {
+  $q.dialog({
+    title: 'Finalize Assessment',
+    message: `Are you sure you want to finalize the assessment "${assessment.name}"? Once finalized, you won't be able to edit it.`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Finalize',
+      color: 'positive',
+      flat: true,
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+    },
+  }).onOk(async () => {
+    try {
+      const response = await api.put(`/assessments/${assessment.id}`, {
+        is_finalized: true,
+      });
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Assessment finalized successfully',
+          position: 'top',
+        });
+        // Refresh assessments list
+        await fetchAssessments();
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to finalize assessment',
+        position: 'top',
+      });
+    }
+  });
 }
 
 async function deleteAssessment(assessment) {

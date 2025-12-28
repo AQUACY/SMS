@@ -209,6 +209,22 @@ class AttendanceController extends BaseApiController
     public function studentAttendance(Request $request, $studentId): JsonResponse
     {
         $termId = $request->get('term_id');
+        $user = auth()->user();
+        
+        // Check subscription and parent-child relationship if parent
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            
+            // Verify the student is linked to this parent
+            if (!$parent->students()->where('students.id', $studentId)->exists()) {
+                return $this->error('Student not found or not linked to your account', 404);
+            }
+            
+            // Check subscription for the term
+            if ($termId && !$parent->hasActiveSubscription($studentId, $termId)) {
+                return $this->error('Subscription required to view attendance for this term', 403);
+            }
+        }
         
         $query = Attendance::where('student_id', $studentId)
             ->with(['term', 'class']);

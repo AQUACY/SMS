@@ -55,15 +55,31 @@ class Guardian extends Model
 
     /**
      * Check if guardian has active subscription for student and term
+     * Also checks for completed subscription payments (in case subscription wasn't created yet)
      */
     public function hasActiveSubscription($studentId, $termId)
     {
-        return $this->subscriptions()
+        // Check for active subscription
+        $hasSubscription = $this->subscriptions()
             ->where('student_id', $studentId)
             ->where('term_id', $termId)
             ->where('status', 'active')
             ->where('expires_at', '>', now())
             ->exists();
+        
+        if ($hasSubscription) {
+            return true;
+        }
+        
+        // Also check for completed subscription payments (subscription might not be created yet)
+        $hasCompletedPayment = $this->payments()
+            ->where('student_id', $studentId)
+            ->where('term_id', $termId)
+            ->where('payment_type', 'subscription_payment')
+            ->where('status', 'completed')
+            ->exists();
+        
+        return $hasCompletedPayment;
     }
 }
 

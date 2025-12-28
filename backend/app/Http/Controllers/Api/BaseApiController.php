@@ -27,15 +27,26 @@ class BaseApiController extends Controller
     /**
      * Error response
      */
-    protected function error(string $message = 'Error', int $statusCode = 400, $errors = null): JsonResponse
+    protected function error(string $message = 'Error', int $statusCode = 400, $data = null): JsonResponse
     {
         $response = [
             'success' => false,
             'message' => $message,
         ];
 
-        if ($errors !== null) {
-            $response['errors'] = $errors;
+        if ($data !== null) {
+            // If data is an array with 'errors' key, use it as errors, otherwise use as data
+            if (is_array($data) && isset($data['errors'])) {
+                $response['errors'] = $data['errors'];
+                unset($data['errors']);
+            }
+            
+            // Add remaining data to response
+            if (is_array($data) && !empty($data)) {
+                $response['data'] = $data;
+            } elseif (!is_array($data)) {
+                $response['data'] = $data;
+            }
         }
 
         return response()->json($response, $statusCode);

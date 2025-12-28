@@ -142,6 +142,14 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
+     * Check if user is accounts manager
+     */
+    public function isAccountsManager()
+    {
+        return $this->hasRole('accounts_manager');
+    }
+
+    /**
      * Get the parent/guardian profile
      */
     public function parent()

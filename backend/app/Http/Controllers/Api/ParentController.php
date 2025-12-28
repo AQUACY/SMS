@@ -26,7 +26,11 @@ class ParentController extends BaseApiController
         }
 
         $children = $parent->students()
-            ->with(['activeEnrollment.class', 'school'])
+            ->with([
+                'activeEnrollment.class.academicYear.activeTerm',
+                'activeEnrollment.class.academicYear',
+                'school'
+            ])
             ->get();
 
         // Add subscription status and full_name for each child
@@ -69,6 +73,17 @@ class ParentController extends BaseApiController
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Ensure full_name is available for each student
+        $subscriptions->each(function ($subscription) {
+            if ($subscription->student) {
+                // The full_name accessor should be automatically available
+                // But we'll ensure it's set explicitly if needed
+                $subscription->student->full_name = trim(
+                    "{$subscription->student->first_name} {$subscription->student->middle_name} {$subscription->student->last_name}"
+                );
+            }
+        });
+
         return $this->success($subscriptions, 'Subscriptions retrieved successfully');
     }
 
@@ -91,9 +106,20 @@ class ParentController extends BaseApiController
         }
 
         $payments = $parent->payments()
-            ->with(['student', 'term'])
+            ->with(['student', 'term.academicYear'])
             ->orderBy('created_at', 'desc')
             ->get();
+
+        // Ensure full_name is available for each student
+        $payments->each(function ($payment) {
+            if ($payment->student) {
+                // The full_name accessor should be automatically available
+                // But we'll ensure it's set explicitly if needed
+                $payment->student->full_name = trim(
+                    "{$payment->student->first_name} {$payment->student->middle_name} {$payment->student->last_name}"
+                );
+            }
+        });
 
         return $this->success($payments, 'Payments retrieved successfully');
     }
@@ -192,6 +218,37 @@ class ParentController extends BaseApiController
         $student->load(['activeEnrollment.class', 'school']);
 
         return $this->success($student, 'Child linked successfully');
+    }
+
+    /**
+     * Unlink a child from parent
+     */
+    public function unlinkChild(Request $request, $studentId): JsonResponse
+    {
+        $user = auth()->user();
+        
+        // Auto-create parent profile if it doesn't exist
+        $parent = $user->parent;
+        if (!$parent) {
+            return $this->error('Parent profile not found', 404);
+        }
+
+        // Find the student
+        $student = \App\Models\Student::find($studentId);
+        
+        if (!$student) {
+            return $this->error('Student not found', 404);
+        }
+
+        // Check if the student is linked to this parent
+        if (!$parent->students()->where('students.id', $student->id)->exists()) {
+            return $this->error('This child is not linked to your account', 404);
+        }
+
+        // Unlink the student
+        $parent->students()->detach($student->id);
+
+        return $this->success(null, 'Child unlinked successfully');
     }
 }
 

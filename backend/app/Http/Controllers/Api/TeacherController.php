@@ -72,10 +72,16 @@ class TeacherController extends BaseApiController
             $user->roles()->attach($teacherRole->id);
         }
 
+        // Generate staff number if not provided
+        $staffNumber = $data['staff_number'] ?? null;
+        if (!$staffNumber) {
+            $staffNumber = Teacher::generateStaffNumber($request->get('school_id'));
+        }
+
         // Create teacher profile
         $teacher = Teacher::create([
             'user_id' => $user->id,
-            'staff_number' => $data['staff_number'] ?? null,
+            'staff_number' => $staffNumber,
             'qualification' => $data['qualification'] ?? null,
             'specialization' => $data['specialization'] ?? null,
             'hire_date' => $data['hire_date'] ?? null,

@@ -96,6 +96,15 @@
             </q-td>
           </template>
 
+          <template v-slot:body-cell-status="props">
+            <q-td :props="props">
+              <q-badge
+                :color="props.row.is_finalized ? 'positive' : 'warning'"
+                :label="props.row.is_finalized ? 'Verified' : 'Pending'"
+              />
+            </q-td>
+          </template>
+
           <template v-slot:body-cell-teacher="props">
             <q-td :props="props">
               <div v-if="props.row.teacher?.user">
@@ -114,24 +123,41 @@
                 color="primary"
                 @click="viewExam(props.row.id)"
                 class="q-mr-xs"
-              />
+              >
+                <q-tooltip>View Exam</q-tooltip>
+              </q-btn>
               <q-btn
-                v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit(props.row)"
+                v-if="showActionButtons(props.row, 'verify')"
+                flat
+                dense
+                icon="check_circle"
+                color="positive"
+                @click="verifyExam(props.row)"
+                class="q-mr-xs"
+              >
+                <q-tooltip>Verify Exam</q-tooltip>
+              </q-btn>
+              <q-btn
+                v-if="showActionButtons(props.row, 'edit')"
                 flat
                 dense
                 icon="edit"
                 color="primary"
                 @click="editExam(props.row.id)"
                 class="q-mr-xs"
-              />
+              >
+                <q-tooltip>Edit Exam</q-tooltip>
+              </q-btn>
               <q-btn
-                v-if="(authStore.isSchoolAdmin || authStore.isSuperAdmin) && canEdit(props.row)"
+                v-if="showActionButtons(props.row, 'delete')"
                 flat
                 dense
                 icon="delete"
                 color="negative"
                 @click="deleteExam(props.row)"
-              />
+              >
+                <q-tooltip>Delete Exam</q-tooltip>
+              </q-btn>
             </q-td>
           </template>
         </q-table>
@@ -172,11 +198,17 @@ const columns = [
   { name: 'class_subject', label: 'Subject / Class', field: 'class_subject', align: 'left' },
   { name: 'term', label: 'Term / Date', field: 'term', align: 'left' },
   { name: 'marks', label: 'Marks / Weight', field: 'marks', align: 'left' },
+  { name: 'status', label: 'Status', field: 'is_finalized', align: 'center' },
   { name: 'teacher', label: 'Teacher', field: 'teacher', align: 'left' },
   { name: 'actions', label: 'Actions', field: 'actions', align: 'right' },
 ];
 
-onMounted(() => {
+onMounted(async () => {
+  // If user is a teacher but teacher relationship is missing, refresh user data
+  if (authStore.isTeacher && !authStore.user?.teacher) {
+    await authStore.fetchUser();
+  }
+  
   fetchTerms();
   fetchClasses();
   fetchExams();
@@ -267,13 +299,97 @@ function viewExam(id) {
 }
 
 function editExam(id) {
-  // For now, navigate to detail page - edit can be added later
   router.push(`/app/exams/${id}`);
 }
 
+function showActionButtons(exam, action) {
+  // Basic permission check
+  const hasPermission = authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin;
+  if (!hasPermission) return false;
+  
+  // Cannot perform actions on finalized exams (except view)
+  if (exam.is_finalized && action !== 'view') return false;
+  
+  // For verify action, must not be finalized
+  if (action === 'verify' && exam.is_finalized) return false;
+  
+  // Admins can always see buttons (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    return true;
+  }
+  
+  // For teachers, check ownership
+  if (authStore.isTeacher) {
+    const teacherId = authStore.user?.teacher?.id;
+    return exam.teacher_id === teacherId;
+  }
+  
+  return false;
+}
+
 function canEdit(exam) {
-  // Can only edit if term allows new assessments
-  return exam.term?.status === 'draft' || exam.term?.status === 'active';
+  // Cannot edit if exam is finalized
+  if (exam.is_finalized) return false;
+  
+  // Admins can always edit (they'll get backend validation if needed)
+  if (authStore.isSchoolAdmin || authStore.isSuperAdmin) {
+    return true;
+  }
+  
+  // For teachers, check ownership and term status
+  if (authStore.isTeacher) {
+    // Check if term allows editing (if term exists)
+    if (exam.term) {
+      const termAllowsEdit = exam.term.status === 'draft' || exam.term.status === 'active';
+      if (!termAllowsEdit) return false;
+    }
+    
+    // Teachers can only edit their own exams
+    const teacherId = authStore.user?.teacher?.id;
+    return exam.teacher_id === teacherId;
+  }
+  
+  return false;
+}
+
+async function verifyExam(exam) {
+  $q.dialog({
+    title: 'Verify Exam',
+    message: `Are you sure you want to verify the exam "${exam.name}"? Once verified, you won't be able to edit it.`,
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Verify',
+      color: 'positive',
+      flat: true,
+    },
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+    },
+  }).onOk(async () => {
+    try {
+      const response = await api.put(`/exams/${exam.id}`, {
+        is_finalized: true,
+      });
+      if (response.data.success) {
+        $q.notify({
+          type: 'positive',
+          message: 'Exam verified successfully',
+          position: 'top',
+        });
+        // Refresh exams list
+        await fetchExams();
+      }
+    } catch (error) {
+      $q.notify({
+        type: 'negative',
+        message: error.response?.data?.message || 'Failed to verify exam',
+        position: 'top',
+      });
+    }
+  });
 }
 
 async function deleteExam(exam) {

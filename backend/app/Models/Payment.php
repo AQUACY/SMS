@@ -13,12 +13,16 @@ class Payment extends Model
         'parent_id',
         'student_id',
         'term_id',
+        'payment_type',
+        'initiated_by',
         'amount',
         'currency',
         'payment_method',
         'momo_provider',
         'momo_transaction_id',
         'reference',
+        'verification_token',
+        'payment_reference',
         'status',
         'webhook_data',
         'verified_at',
@@ -61,6 +65,30 @@ class Payment extends Model
     public function subscription()
     {
         return $this->hasOne(Subscription::class);
+    }
+
+    /**
+     * Get the user who initiated this payment (for manual payments)
+     */
+    public function initiatedBy()
+    {
+        return $this->belongsTo(User::class, 'initiated_by');
+    }
+
+    /**
+     * Check if this is a fee payment
+     */
+    public function isFeePayment()
+    {
+        return $this->payment_type === 'fee_payment';
+    }
+
+    /**
+     * Check if this is a subscription payment
+     */
+    public function isSubscriptionPayment()
+    {
+        return $this->payment_type === 'subscription_payment';
     }
 
     /**

@@ -32,10 +32,15 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(
   (config) => {
     const authStore = useAuthStore();
-    const token = authStore.token;
+    // Get token from store first, fallback to localStorage for page refresh scenarios
+    const token = authStore.token || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Update store token if it was missing but found in localStorage
+      if (!authStore.token && token) {
+        authStore.token = token;
+      }
     }
 
     return config;
@@ -48,6 +53,10 @@ api.interceptors.request.use(
 // Response interceptor - Handle errors globally
 api.interceptors.response.use(
   (response) => {
+    // Don't process blob responses - let them pass through
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
     return response;
   },
   async (error) => {
@@ -71,6 +80,10 @@ api.interceptors.response.use(
             message: 'Session expired. Please login again.',
             position: 'top',
           });
+          // Redirect to login
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
           return Promise.reject(error);
         }
 
@@ -84,6 +97,10 @@ api.interceptors.response.use(
             message: 'Session expired. Please login again.',
             position: 'top',
           });
+          // Redirect to login
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
           return Promise.reject(error);
         }
 
@@ -156,6 +173,10 @@ api.interceptors.response.use(
               message: 'Session expired. Please login again.',
               position: 'top',
             });
+            // Redirect to login
+            if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+              window.location.href = '/login';
+            }
             return Promise.reject(error);
           }
         } catch (refreshError) {
@@ -167,6 +188,10 @@ api.interceptors.response.use(
             message: 'Session expired. Please login again.',
             position: 'top',
           });
+          // Redirect to login
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
           return Promise.reject(refreshError);
         } finally {
           isRefreshing = false;
@@ -204,12 +229,14 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
     } else if (error.request) {
-      // Network error
-      Notify.create({
-        type: 'negative',
-        message: 'Network error. Please check your connection.',
-        position: 'top',
-      });
+      // Network error - but skip notification for blob responses
+      if (originalRequest?.responseType !== 'blob') {
+        Notify.create({
+          type: 'negative',
+          message: 'Network error. Please check your connection.',
+          position: 'top',
+        });
+      }
     }
 
     return Promise.reject(error);

@@ -15,9 +15,22 @@ class TermController extends BaseApiController
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Term::whereHas('academicYear', function ($q) use ($request) {
-            $q->where('school_id', $request->get('school_id'));
-        })->with('academicYear');
+        $user = auth()->user();
+        
+        // For parents, show terms from all schools (they may have children in different schools)
+        // For other users, filter by school_id
+        if ($user->isParent()) {
+            $query = Term::with('academicYear');
+        } else {
+            $schoolId = $request->get('school_id');
+            if (!$schoolId) {
+                return $this->error('School ID is required', 400);
+            }
+            
+            $query = Term::whereHas('academicYear', function ($q) use ($schoolId) {
+                $q->where('school_id', $schoolId);
+            })->with('academicYear');
+        }
 
         if ($request->has('academic_year_id')) {
             $query->where('academic_year_id', $request->get('academic_year_id'));

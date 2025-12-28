@@ -23,6 +23,10 @@ use App\Http\Controllers\Api\ExcelImportController;
 use App\Http\Controllers\Api\SchoolController;
 use App\Http\Controllers\Api\GuardianController;
 use App\Http\Controllers\Api\GradingScaleController;
+use App\Http\Controllers\Api\FeeController;
+use App\Http\Controllers\Api\SubscriptionPriceController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +49,8 @@ Route::prefix('auth')->group(function () {
 
 // Protected routes (authentication required)
 Route::middleware(['auth:api', 'school.scope'])->group(function () {
+    // Dashboard Statistics
+    Route::get('/dashboard/statistics', [DashboardController::class, 'statistics']);
     
     // Auth routes
     Route::prefix('auth')->group(function () {
@@ -65,6 +71,9 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
     Route::post('/students/{student}/guardians', [StudentController::class, 'linkGuardian'])->middleware('role:super_admin,school_admin');
     Route::delete('/students/{student}/guardians/{guardian}', [StudentController::class, 'unlinkGuardian'])->middleware('role:super_admin,school_admin');
 
+    // Users Management (School Admin only)
+    Route::apiResource('users', UserController::class)->middleware('role:school_admin');
+    
     // Teachers
     Route::apiResource('teachers', TeacherController::class)->middleware('role:super_admin,school_admin');
     Route::get('/teachers/{teacher}/classes', [TeacherController::class, 'classes']);
@@ -91,7 +100,7 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
         Route::post('/mark', [AttendanceController::class, 'mark'])->middleware('role:super_admin,school_admin,teacher');
         Route::get('/reports', [AttendanceController::class, 'reports']);
         Route::get('/pdf', [AttendanceController::class, 'generatePdf']);
-        Route::get('/student/{studentId}', [AttendanceController::class, 'studentAttendance']);
+        Route::get('/student/{studentId}', [AttendanceController::class, 'studentAttendance'])->middleware('parent.subscription');
         Route::get('/class/{classId}', [AttendanceController::class, 'classAttendance']);
         Route::get('/{attendance}', [AttendanceController::class, 'show']);
         Route::put('/{attendance}', [AttendanceController::class, 'update'])->middleware('role:super_admin,school_admin,teacher');
@@ -141,6 +150,7 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
     Route::prefix('parent')->middleware('role:parent')->group(function () {
         Route::get('/children', [ParentController::class, 'children']);
         Route::post('/link-child', [ParentController::class, 'linkChild']);
+        Route::delete('/unlink-child/{studentId}', [ParentController::class, 'unlinkChild']);
         Route::get('/subscriptions', [ParentController::class, 'subscriptions']);
         Route::get('/payments', [ParentController::class, 'payments']);
         Route::post('/payments', [PaymentController::class, 'store']);
@@ -158,15 +168,25 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
     Route::get('/subscriptions/student/{studentId}', [SubscriptionController::class, 'studentSubscriptions']);
     Route::get('/subscriptions/parent/{parentId}', [SubscriptionController::class, 'parentSubscriptions']);
 
-    // Payments (Admin)
-    Route::apiResource('payments', PaymentController::class)->middleware('role:super_admin,school_admin');
-    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware('role:super_admin,school_admin');
-    Route::post('/payments/webhook', [PaymentController::class, 'webhook']); // Public webhook endpoint
+    // Payments (Admin - filter by payment_type)
+    Route::apiResource('payments', PaymentController::class)->middleware('role:super_admin,school_admin,accounts_manager');
+    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware('role:super_admin,school_admin,accounts_manager');
+    Route::post('/payments/initiate-fee', [PaymentController::class, 'initiateFeePayment'])->middleware('role:school_admin,accounts_manager');
+    Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('api.payments.webhook'); // Public webhook endpoint
+    
+    // Fees Management (School Admin & Accounts Manager)
+    Route::apiResource('fees', FeeController::class)->middleware('role:super_admin,school_admin,accounts_manager');
+    Route::get('/fees/term/{termId}', [FeeController::class, 'getTermFee']); // Public endpoint for parents to check fee
+    
+    // Subscription Prices Management (Super Admin only)
+    Route::apiResource('subscription-prices', SubscriptionPriceController::class)->middleware('role:super_admin');
+    Route::get('/subscription-prices/student/{studentId}', [SubscriptionPriceController::class, 'getStudentPrice']); // Public endpoint for parents
     
     // Parent Payment Routes
     Route::prefix('parent')->middleware('role:parent')->group(function () {
         Route::get('/payments/{payment}/status', [PaymentController::class, 'checkStatus']);
         Route::post('/payments/{payment}/retry', [PaymentController::class, 'retry']);
+        Route::post('/payments/verify', [PaymentController::class, 'verifyPayment']);
     });
 
     // Notifications

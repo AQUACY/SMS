@@ -33,6 +33,11 @@ class RoleSeeder extends Seeder
                 'display_name' => 'Parent',
                 'description' => 'Parent with read-only access to subscribed student data',
             ],
+            [
+                'name' => 'accounts_manager',
+                'display_name' => 'Accounts Manager',
+                'description' => 'School accounts manager with access to manage school fees and payments',
+            ],
         ];
 
         foreach ($roles as $role) {

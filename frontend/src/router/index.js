@@ -32,8 +32,11 @@ export default route(function (/* { store, ssrContext } */) {
   });
 
   // Navigation guard - Check authentication and roles
-  Router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('token');
+  Router.beforeEach(async (to, from, next) => {
+    const { useAuthStore } = await import('src/stores/auth');
+    const authStore = useAuthStore();
+    
+    const token = authStore.token || localStorage.getItem('token');
     const isAuthRequired = to.matched.some(record => record.meta.requiresAuth);
     const isGuestOnly = to.matched.some(record => record.meta.guestOnly);
     const requiredRoles = to.matched
@@ -43,21 +46,55 @@ export default route(function (/* { store, ssrContext } */) {
 
     // If route requires auth and no token, redirect to login
     if (isAuthRequired && !token) {
+      authStore.clearAuth();
       next({ path: '/login', query: { redirect: to.fullPath } });
       return;
     }
 
+    // If we have a token but user is not authenticated, try to check auth
+    if (token && !authStore.isAuthenticated) {
+      try {
+        const authResult = await authStore.checkAuth();
+        
+        // If auth check fails, clear and redirect to login
+        if (!authResult) {
+          // Only redirect if we're not already going to login
+          if (to.path !== '/login') {
+            authStore.clearAuth();
+            next({ path: '/login', query: { redirect: to.fullPath } });
+            return;
+          }
+        }
+      } catch (error) {
+        // If checkAuth throws an error, don't redirect if we're already on login
+        if (to.path !== '/login') {
+          authStore.clearAuth();
+          next({ path: '/login', query: { redirect: to.fullPath } });
+          return;
+        }
+      }
+    }
+
     // If route is guest-only and user is authenticated, redirect to dashboard
-    if (isGuestOnly && token) {
+    if (isGuestOnly && token && authStore.isAuthenticated) {
       next({ path: '/app/dashboard' });
       return;
     }
 
     // Check role-based access (if roles are specified)
-    if (token && requiredRoles.length > 0) {
-      // Get user roles from token or store
-      // For now, we'll allow access - proper role checking will be done in components
-      // TODO: Implement proper role checking from JWT token or auth store
+    if (token && requiredRoles.length > 0 && authStore.isAuthenticated) {
+      const hasRequiredRole = requiredRoles.some(role => authStore.hasRole(role));
+      
+      if (!hasRequiredRole) {
+        next({ path: '/app/dashboard' });
+        return;
+      }
+    }
+
+    // If authenticated but trying to access login/register, redirect to dashboard
+    if ((to.path === '/login' || to.path === '/register') && token && authStore.isAuthenticated) {
+      next({ path: '/app/dashboard' });
+      return;
     }
 
     next();

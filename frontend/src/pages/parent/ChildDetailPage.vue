@@ -108,32 +108,72 @@
               <div v-else class="text-body2 text-grey-7">Not enrolled in any class</div>
             </q-card-section>
           </q-card>
-        </div>
 
-        <!-- Quick Actions Card -->
-        <q-card class="actions-card">
+          <!-- Quick Actions Card -->
+          <q-card class="actions-card">
+          <!-- Payment Actions Section -->
+          <q-card-section class="q-pa-md q-pb-sm">
+            <div class="text-h6 q-mb-md">Payments & Subscriptions</div>
+            
+            <!-- Pay School Fees Button -->
+            <q-btn
+              flat
+              unelevated
+              class="action-btn full-width q-mb-sm"
+              color="primary"
+              @click="paySchoolFees(child)"
+              size="lg"
+            >
+              <q-icon name="school" color="primary" size="24px" class="q-mr-sm" />
+              <div class="col text-left">
+                <div class="text-body1 text-weight-medium">Pay School Fees</div>
+                <div class="text-caption text-grey-7">Pay term fees to the school</div>
+              </div>
+              <q-icon name="chevron_right" color="grey-6" />
+            </q-btn>
+
+            <!-- Subscribe Button -->
+            <q-btn
+              flat
+              unelevated
+              class="action-btn full-width"
+              :color="child.has_active_subscription ? 'positive' : 'warning'"
+              @click="subscribeToTerm(child)"
+              size="lg"
+            >
+              <q-icon 
+                :name="child.has_active_subscription ? 'check_circle' : 'card_membership'" 
+                :color="child.has_active_subscription ? 'positive' : 'warning'" 
+                size="24px" 
+                class="q-mr-sm" 
+              />
+              <div class="col text-left">
+                <div class="text-body1 text-weight-medium">
+                  {{ child.has_active_subscription ? 'Manage Subscription' : 'Subscribe' }}
+                </div>
+                <div class="text-caption text-grey-7">
+                  {{ child.has_active_subscription ? 'View or renew subscription' : 'Subscribe to view academic records' }}
+                </div>
+              </div>
+              <q-icon name="chevron_right" color="grey-6" />
+            </q-btn>
+          </q-card-section>
+
+          <q-separator class="q-mx-md" />
+
           <!-- Subscription Banner -->
           <q-banner
             v-if="!child.has_active_subscription"
             dense
             rounded
-            class="bg-warning text-white q-ma-md"
+            class="bg-info text-white q-ma-md"
           >
             <template v-slot:avatar>
-              <q-icon name="warning" color="white" />
+              <q-icon name="info" color="white" />
             </template>
             <div class="text-body2">
-              Subscribe to view full details and academic records.
+              Subscribe to unlock full access to your child's academic records, attendance, results, and report cards.
             </div>
-            <template v-slot:action>
-              <q-btn
-                flat
-                label="Subscribe"
-                color="white"
-                size="sm"
-                @click="subscribeToTerm(child)"
-              />
-            </template>
           </q-banner>
 
           <q-card-section class="q-pa-md">
@@ -202,10 +242,28 @@
                 </div>
                 <q-icon name="chevron_right" color="grey-6" />
               </q-btn>
+
+              <q-separator class="q-my-md" />
+
+              <q-btn
+                flat
+                unelevated
+                class="action-btn full-width"
+                color="negative"
+                @click="confirmUnlinkChild(child)"
+                size="lg"
+              >
+                <q-icon name="link_off" color="negative" size="24px" class="q-mr-sm" />
+                <div class="col text-left">
+                  <div class="text-body1 text-weight-medium">Unlink Child</div>
+                  <div class="text-caption text-grey-7">Remove this child from your account</div>
+                </div>
+                <q-icon name="chevron_right" color="grey-6" />
+              </q-btn>
             </div>
           </q-card-section>
         </q-card>
-      </div>
+        </div>
 
       <div v-if="!loading && !child" class="empty-state text-center q-pa-xl">
         <q-icon name="error_outline" size="64px" color="grey-5" class="q-mb-md" />
@@ -310,7 +368,7 @@ function viewAttendance(child) {
     });
     return;
   }
-  router.push(`/app/attendance?student_id=${child.id}`);
+  router.push(`/app/parent/children/${child.id}/attendance`);
 }
 
 function viewResults(child) {
@@ -322,7 +380,7 @@ function viewResults(child) {
     });
     return;
   }
-  router.push(`/app/results/${child.id}`);
+  router.push(`/app/parent/children/${child.id}/results`);
 }
 
 function viewReportCards(child) {
@@ -334,7 +392,7 @@ function viewReportCards(child) {
     });
     return;
   }
-  router.push(`/app/report-cards?student=${child.id}`);
+  router.push(`/app/parent/children/${child.id}/report-cards`);
 }
 
 function viewAssessments(child) {
@@ -346,16 +404,81 @@ function viewAssessments(child) {
     });
     return;
   }
-  router.push(`/app/assessments?student_id=${child.id}`);
+  router.push(`/app/parent/children/${child.id}/assessments`);
+}
+
+function paySchoolFees(child) {
+  // Navigate to payment page - let user select term if no active term
+  if (child.active_enrollment?.class?.academic_year?.active_term?.id) {
+    router.push({
+      path: `/app/parent/payment/${child.id}/${child.active_enrollment.class.academic_year.active_term.id}`,
+      query: { type: 'fee' },
+    });
+  } else {
+    // Navigate without term ID - user can select term on payment page
+    router.push({
+      path: `/app/parent/payment/${child.id}`,
+      query: { type: 'fee' },
+    });
+  }
 }
 
 function subscribeToTerm(child) {
+  // Navigate to payment page - let user select term if no active term
   if (child.active_enrollment?.class?.academic_year?.active_term?.id) {
-    router.push(`/app/parent/payment/${child.id}/${child.active_enrollment.class.academic_year.active_term.id}`);
+    router.push({
+      path: `/app/parent/payment/${child.id}/${child.active_enrollment.class.academic_year.active_term.id}`,
+      query: { type: 'subscription' },
+    });
   } else {
+    // Navigate without term ID - user can select term on payment page
+    // Note: Subscription might not require a term, but we'll include it for consistency
+    router.push({
+      path: `/app/parent/payment/${child.id}`,
+      query: { type: 'subscription' },
+    });
+  }
+}
+
+function confirmUnlinkChild(child) {
+  $q.dialog({
+    title: 'Unlink Child',
+    message: `Are you sure you want to unlink ${getFullName(child)} (${child.student_number}) from your account? This action cannot be undone.`,
+    cancel: {
+      label: 'Cancel',
+      flat: true,
+      color: 'grey-7',
+    },
+    ok: {
+      label: 'Unlink',
+      flat: true,
+      color: 'negative',
+    },
+    persistent: true,
+  }).onOk(() => {
+    unlinkChild(child);
+  });
+}
+
+async function unlinkChild(child) {
+  try {
+    const response = await api.delete(`/parent/unlink-child/${child.id}`);
+    
+    if (response.data.success) {
+      $q.notify({
+        type: 'positive',
+        message: 'Child unlinked successfully',
+        position: 'top',
+      });
+      
+      // Redirect to children list
+      router.push('/app/parent/children');
+    }
+  } catch (error) {
+    console.error('Failed to unlink child:', error);
     $q.notify({
-      type: 'warning',
-      message: 'No active term found for this child to subscribe.',
+      type: 'negative',
+      message: error.response?.data?.message || 'Failed to unlink child',
       position: 'top',
     });
   }

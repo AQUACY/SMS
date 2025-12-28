@@ -7,17 +7,30 @@
           <div class="text-h6 text-weight-bold">My Payments</div>
           <div class="text-caption text-grey-7">Payment history</div>
         </div>
-        <q-btn
-          round
-          color="primary"
-          icon="subscriptions"
-          unelevated
-          size="md"
-          to="/app/parent/subscriptions"
-          class="q-ml-sm"
-        >
-          <q-tooltip>View Subscriptions</q-tooltip>
-        </q-btn>
+        <div class="row q-gutter-sm">
+          <q-btn
+            round
+            color="primary"
+            icon="verified"
+            unelevated
+            size="md"
+            to="/app/parent/verify-payment"
+            class="q-ml-sm"
+          >
+            <q-tooltip>Verify Payment</q-tooltip>
+          </q-btn>
+          <q-btn
+            round
+            color="primary"
+            icon="subscriptions"
+            unelevated
+            size="md"
+            to="/app/parent/subscriptions"
+            class="q-ml-sm"
+          >
+            <q-tooltip>View Subscriptions</q-tooltip>
+          </q-btn>
+        </div>
       </div>
     </div>
 
@@ -117,8 +130,39 @@
           <template v-slot:body-cell-reference="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.reference || 'N/A' }}</div>
+              <div v-if="props.row.verification_token && props.row.status === 'pending'" class="text-caption text-primary q-mt-xs">
+                Token: {{ props.row.verification_token }}
+              </div>
               <div v-if="props.row.momo_transaction_id" class="text-caption text-grey-7">
                 TXN: {{ props.row.momo_transaction_id }}
+              </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-actions="props">
+            <q-td :props="props">
+              <div class="row q-gutter-xs">
+                <q-btn
+                  v-if="props.row.status === 'pending' && props.row.verification_token"
+                  flat
+                  dense
+                  round
+                  icon="verified"
+                  color="positive"
+                  @click="goToVerify(props.row)"
+                >
+                  <q-tooltip>Verify Payment</q-tooltip>
+                </q-btn>
+                <q-btn
+                  flat
+                  dense
+                  round
+                  icon="visibility"
+                  color="primary"
+                  @click="viewPayment(props.row)"
+                >
+                  <q-tooltip>View Details</q-tooltip>
+                </q-btn>
               </div>
             </q-td>
           </template>
@@ -129,21 +173,6 @@
               <div v-if="props.row.verified_at" class="text-caption text-grey-7">
                 Verified: {{ formatDate(props.row.verified_at) }}
               </div>
-            </q-td>
-          </template>
-
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn
-                flat
-                dense
-                round
-                icon="visibility"
-                color="primary"
-                @click="viewPayment(props.row)"
-              >
-                <q-tooltip>View Details</q-tooltip>
-              </q-btn>
             </q-td>
           </template>
         </q-table>
@@ -195,15 +224,33 @@
                   <div class="text-caption text-grey-7">Reference</div>
                   <div class="text-body2">{{ payment.reference }}</div>
                 </div>
+                <div v-if="payment.verification_token && payment.status === 'pending'">
+                  <div class="text-caption text-grey-7">Verification Token</div>
+                  <div class="text-body2 text-weight-bold text-primary">{{ payment.verification_token }}</div>
+                  <div class="text-caption text-grey-6 q-mt-xs">
+                    Use this token in your payment reference
+                  </div>
+                </div>
               </div>
             </q-card-section>
             <q-card-actions class="q-pa-md q-pt-none">
+              <q-btn
+                v-if="payment.status === 'pending' && payment.verification_token"
+                flat
+                label="Verify Payment"
+                color="positive"
+                icon="verified"
+                @click.stop="goToVerify(payment)"
+                class="full-width q-mb-sm"
+                size="md"
+              />
               <q-btn
                 flat
                 label="View Details"
                 color="primary"
                 icon="chevron_right"
                 icon-right="chevron_right"
+                @click.stop="viewPayment(payment)"
                 class="full-width"
                 size="md"
               />
@@ -225,10 +272,12 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
 import api from 'src/services/api';
 
+const router = useRouter();
 const $q = useQuasar();
 const authStore = useAuthStore();
 
@@ -346,6 +395,15 @@ function formatDate(date) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+  });
+}
+
+function goToVerify(payment) {
+  router.push({
+    path: '/app/parent/verify-payment',
+    query: {
+      token: payment.verification_token,
+    },
   });
 }
 </script>

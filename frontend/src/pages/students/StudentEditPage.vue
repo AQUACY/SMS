@@ -28,11 +28,11 @@
               
               <q-input
                 v-model="studentForm.student_number"
-                label="Student Number *"
+                label="Student Number"
                 outlined
-                :rules="[val => !!val || 'Student number is required']"
-                hint="Unique identifier for the student"
-                :disable="saving"
+                hint="Auto-generated identifier (cannot be changed)"
+                readonly
+                :disable="true"
               />
 
               <div class="row q-col-gutter-sm">

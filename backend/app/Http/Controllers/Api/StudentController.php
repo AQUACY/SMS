@@ -25,7 +25,7 @@ class StudentController extends BaseApiController
         $schoolId = $request->get('school_id');
         
         $query = Student::where('school_id', $schoolId)
-            ->with(['activeEnrollment.class', 'parents']);
+            ->with(['activeEnrollment.class', 'parents.user']);
 
         // Search
         if ($request->has('search')) {
@@ -89,16 +89,9 @@ class StudentController extends BaseApiController
 
         DB::beginTransaction();
         try {
-            // Auto-generate student number if not provided
-            if (empty($data['student_number'])) {
-                $data['student_number'] = Student::generateStudentNumber($schoolId);
-            } else {
-                // If provided, ensure it doesn't already exist
-                $existingStudent = Student::where('student_number', $data['student_number'])->first();
-                if ($existingStudent) {
-                    return $this->error('Student number already exists. Leave it blank to auto-generate.', 422);
-                }
-            }
+            // Always auto-generate student number (multi-tenant requirement)
+            // Student numbers are generated based on school code to ensure uniqueness across schools
+            $data['student_number'] = Student::generateStudentNumber($schoolId);
 
             // Create student
             $student = Student::create([

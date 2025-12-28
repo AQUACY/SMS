@@ -22,14 +22,12 @@
             <div class="col-12 col-md-6">
               <div class="text-subtitle2 q-mb-sm">Basic Information</div>
               
-              <q-input
-                v-model="studentForm.student_number"
-                label="Student Number *"
-                outlined
-                :rules="[val => !!val || 'Student number is required']"
-                hint="Unique identifier for the student"
-                class="q-mb-md"
-              />
+              <q-banner rounded class="bg-info text-white q-mb-md">
+                <template v-slot:avatar>
+                  <q-icon name="info" />
+                </template>
+                Student number will be auto-generated based on your school code (e.g., B12-STU001)
+              </q-banner>
 
               <div class="row q-col-gutter-sm">
                 <q-input
@@ -186,7 +184,6 @@ const genderOptions = [
 const classOptions = ref([]);
 
 const studentForm = ref({
-  student_number: '',
   first_name: '',
   middle_name: '',
   last_name: '',
