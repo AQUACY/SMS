@@ -462,6 +462,12 @@ const routes = [
         component: () => import('src/pages/notifications/NotificationsPage.vue'),
         meta: { requiresAuth: true },
       },
+      {
+        path: 'notifications/send',
+        name: 'send-notification',
+        component: () => import('src/pages/notifications/SendNotificationPage.vue'),
+        meta: { requiresAuth: true, roles: ['super_admin', 'school_admin'] },
+      },
 
       // Profile & Settings
       {

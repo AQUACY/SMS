@@ -17,12 +17,20 @@ class Notification extends Model
         'data',
         'is_read',
         'read_at',
+        'is_announcement',
+        'priority',
+        'email_sent',
+        'email_sent_at',
+        'created_by',
     ];
 
     protected $casts = [
         'data' => 'array',
         'is_read' => 'boolean',
         'read_at' => 'datetime',
+        'is_announcement' => 'boolean',
+        'email_sent' => 'boolean',
+        'email_sent_at' => 'datetime',
     ];
 
     /**
@@ -31,6 +39,14 @@ class Notification extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the user who created this notification
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

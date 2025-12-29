@@ -193,8 +193,16 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
         Route::get('/unread', [NotificationController::class, 'unread']);
+        Route::get('/announcements', [NotificationController::class, 'announcements']);
         Route::post('/{notification}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead']);
+        
+        // Admin routes
+        Route::post('/send', [NotificationController::class, 'send']);
+        Route::get('/recipients', [NotificationController::class, 'recipients']);
+        Route::get('/sent', [NotificationController::class, 'sent']);
+        Route::put('/sent/{id}', [NotificationController::class, 'update']);
+        Route::delete('/sent/{id}', [NotificationController::class, 'destroy']);
     });
 
     // Settings (Admin only)

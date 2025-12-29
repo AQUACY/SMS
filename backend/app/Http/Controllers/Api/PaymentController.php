@@ -447,6 +447,11 @@ class PaymentController extends BaseApiController
 
             $payment->load(['parent.user', 'student', 'term', 'subscription']);
 
+            // Send notifications
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->sendPaymentNotification($payment, 'completed');
+            $notificationService->sendSubscriptionNotification($subscription, 'active');
+
             return $this->success([
                 'payment' => $payment,
                 'subscription' => $subscription,
@@ -454,6 +459,11 @@ class PaymentController extends BaseApiController
         } else {
             // For fee payments, just return success
             $payment->load(['parent.user', 'student', 'term']);
+            
+            // Send notification for fee payment
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->sendPaymentNotification($payment, 'completed');
+            
             return $this->success([
                 'payment' => $payment,
             ], 'Fee payment verified successfully');

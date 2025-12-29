@@ -55,7 +55,7 @@
         />
 
         <!-- Search Bar -->
-        <q-input
+        <!-- <q-input
           v-model="searchQuery"
           placeholder="Search anything here"
           dense
@@ -66,7 +66,7 @@
           <template v-slot:append>
             <q-icon name="search" />
           </template>
-        </q-input>
+        </q-input> -->
 
         <q-space />
 

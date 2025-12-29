@@ -72,9 +72,7 @@
 
         <!-- Right Side Actions -->
         <div class="row items-center q-gutter-sm">
-          <q-btn flat round dense icon="notifications" color="grey-8">
-            <q-badge color="red" floating>3</q-badge>
-          </q-btn>
+          <NotificationBell />
           
           <q-btn flat round dense icon="chat" color="grey-8" />
 
@@ -123,11 +121,14 @@
 
     <!-- Main Content -->
     <q-page-container class="main-content">
-      <router-view v-slot="{ Component }">
-        <transition name="page-fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
-      </router-view>
+      <div class="page-wrapper">
+        <AnnouncementBanner />
+        <router-view v-slot="{ Component }">
+          <transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
+      </div>
     </q-page-container>
 
     <!-- Mobile Bottom Navigation -->
@@ -141,6 +142,8 @@ import { useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
 import { useQuasar } from 'quasar';
 import MobileBottomNav from 'src/components/MobileBottomNav.vue';
+import NotificationBell from 'src/components/notifications/NotificationBell.vue';
+import AnnouncementBanner from 'src/components/notifications/AnnouncementBanner.vue';
 
 const $q = useQuasar();
 const router = useRouter();
@@ -310,6 +313,14 @@ async function handleLogout() {
 .main-content {
   @media (max-width: 767px) {
     padding-bottom: 80px !important;
+  }
+}
+
+.page-wrapper {
+  min-height: calc(100vh - 64px);
+  
+  @media (max-width: 767px) {
+    min-height: calc(100vh - 56px - 80px);
   }
 }
 </style>

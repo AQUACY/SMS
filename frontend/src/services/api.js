@@ -68,7 +68,7 @@ api.interceptors.response.use(
 
       // Handle 401 Unauthorized - Token expired or invalid
       if (status === 401) {
-        const requestUrl = originalRequest.url || '';
+        const requestUrl = (originalRequest && originalRequest.url) || '';
         
         // Don't retry refresh token or logout endpoints - these should fail gracefully
         if (requestUrl.includes('/auth/refresh') || requestUrl.includes('/auth/logout')) {

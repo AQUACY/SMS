@@ -141,7 +141,7 @@ const statistics = computed(() => {
       {
         label: 'Subscription Revenue',
         value: stats.total_subscription_revenue || 0,
-        icon: 'attach_money',
+        icon: 'wallet',
         colorClass: 'stat-card-amber',
         iconClass: 'text-amber',
         subLabel: `${stats.pending_subscription_payments || 0} pending`,
@@ -185,7 +185,7 @@ const statistics = computed(() => {
       {
         label: 'Fee Revenue',
         value: stats.total_fee_revenue || 0,
-        icon: 'attach_money',
+        icon: 'wallet',
         colorClass: 'stat-card-amber',
         iconClass: 'text-amber',
         subLabel: `${stats.pending_fee_payments || 0} pending`,
@@ -236,7 +236,7 @@ const statistics = computed(() => {
       {
         label: 'Total Revenue',
         value: stats.total_revenue || 0,
-        icon: 'attach_money',
+        icon: 'wallet',
         colorClass: 'stat-card-blue',
         iconClass: 'text-blue',
       },
