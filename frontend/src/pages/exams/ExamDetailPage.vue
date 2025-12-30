@@ -1,192 +1,223 @@
 <template>
-  <q-page class="q-pa-lg" v-if="exam">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="$router.push('/app/exams')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ exam.name }}</div>
-        <div class="text-body2 text-grey-7">
-          {{ exam.class_subject?.subject?.name || 'N/A' }} - {{ exam.class_subject?.class?.name || 'N/A' }}
-        </div>
-      </div>
-      <q-space />
-      <q-btn
-        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
-        color="positive"
-        label="Verify"
-        icon="check_circle"
-        unelevated
-        @click="verifyExam"
-        class="q-mr-sm"
-      />
-      <q-btn
-        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
-        color="primary"
-        label="Edit"
-        icon="edit"
-        unelevated
-        @click="editExam"
-        class="q-mr-sm"
-      />
-      <q-btn
-        v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
-        color="negative"
-        label="Delete"
-        icon="delete"
-        unelevated
-        @click="deleteExam"
-      />
+  <q-page v-if="loading" class="exam-detail-page">
+    <div class="detail-loading">
+      <MobileCard v-for="i in 2" :key="i" variant="default" padding="md" class="q-mb-md">
+        <q-skeleton type="rect" height="100px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
+  </q-page>
 
-    <div class="row q-col-gutter-md">
-      <!-- Exam Information -->
-      <div class="col-12 col-md-8">
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Exam Information</div>
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Term</div>
-                <div class="text-body1">{{ exam.term?.name || 'N/A' }}</div>
-                <div class="text-caption text-grey-7 q-mt-xs">
-                  {{ exam.term?.academic_year?.name || '' }}
+  <q-page v-else-if="exam" class="exam-detail-page">
+    <MobilePageHeader
+      :title="exam.name"
+      :subtitle="`${exam.class_subject?.subject?.name || 'N/A'} - ${exam.class_subject?.class?.name || 'N/A'}`"
+      :show-back="true"
+      @back="$router.push('/app/exams')"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
+          color="positive"
+          :label="$q.screen.gt.xs ? 'Verify' : ''"
+          icon="check_circle"
+          unelevated
+          @click="verifyExam"
+          class="mobile-btn q-mr-xs"
+        />
+        <q-btn
+          v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Edit' : ''"
+          icon="edit"
+          unelevated
+          @click="editExam"
+          class="mobile-btn q-mr-xs"
+        />
+        <q-btn
+          v-if="exam && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin) && !exam.is_finalized && canEdit"
+          color="negative"
+          :label="$q.screen.gt.xs ? 'Delete' : ''"
+          icon="delete"
+          unelevated
+          @click="deleteExam"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <div class="detail-content">
+      <!-- Exam Information Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Exam Information</div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Term</div>
+            <div class="info-value">{{ exam.term?.name || 'N/A' }}</div>
+            <div class="info-sublabel">{{ exam.term?.academic_year?.name || '' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Class</div>
+            <div class="info-value">{{ exam.class_subject?.class?.name || 'N/A' }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Subject</div>
+            <div class="info-value">{{ exam.class_subject?.subject?.name || 'N/A' }}</div>
+            <div class="info-sublabel" v-if="exam.class_subject?.subject?.code">
+              Code: {{ exam.class_subject.subject.code }}
+            </div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Teacher</div>
+            <div class="info-value" v-if="exam.teacher?.user">
+              {{ exam.teacher.user.first_name }} {{ exam.teacher.user.last_name }}
+            </div>
+            <div class="info-value text-grey-7" v-else>Not assigned</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Total Marks</div>
+            <div class="info-value">{{ exam.total_marks }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Weight</div>
+            <div class="info-value">{{ exam.weight }}%</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Exam Date</div>
+            <div class="info-value">{{ formatDate(exam.assessment_date) }}</div>
+          </div>
+          <div class="info-item" v-if="exam.due_date">
+            <div class="info-label">Due Date</div>
+            <div class="info-value">{{ formatDate(exam.due_date) }}</div>
+          </div>
+        </div>
+      </MobileCard>
+
+      <!-- Results Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="row items-center justify-between q-mb-md">
+          <div class="card-title">Results</div>
+          <q-btn
+            v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            color="primary"
+            :label="$q.screen.gt.xs ? 'Enter Results' : ''"
+            icon="add"
+            unelevated
+            @click="enterResults"
+            class="mobile-btn"
+          />
+        </div>
+
+        <!-- Mobile Results List -->
+        <div v-if="results.length > 0" class="mobile-results-list">
+          <div
+            v-for="result in results"
+            :key="result.id"
+            class="result-card"
+          >
+            <div class="result-header">
+              <div>
+                <div class="result-student-name">{{ result.student?.full_name || 'N/A' }}</div>
+                <div class="result-student-id">{{ result.student?.student_number || '' }}</div>
+              </div>
+              <q-badge
+                v-if="result.grade"
+                :color="getGradeColor(result.grade)"
+                :label="result.grade"
+              />
+            </div>
+            <div class="result-details">
+              <div class="result-marks">
+                <span class="marks-value">{{ result.marks_obtained || '-' }}</span>
+                <span class="marks-total">/ {{ exam.total_marks }}</span>
+                <span v-if="result.marks_obtained" class="marks-percentage">
+                  ({{ calculatePercentage(result.marks_obtained) }}%)
+                </span>
+              </div>
+              <div v-if="result.remarks" class="result-remarks">{{ result.remarks }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop Results Table -->
+        <div class="desktop-table-view">
+          <q-table
+            v-if="results.length > 0"
+            :rows="results"
+            :columns="resultColumns"
+            row-key="id"
+            flat
+          >
+            <template v-slot:body-cell-student="props">
+              <q-td :props="props">
+                <div class="text-body2">{{ props.row.student?.full_name || 'N/A' }}</div>
+                <div class="text-caption text-grey-7">{{ props.row.student?.student_number || '' }}</div>
+              </q-td>
+            </template>
+
+            <template v-slot:body-cell-marks="props">
+              <q-td :props="props">
+                <div class="text-body2">
+                  {{ props.row.marks_obtained || '-' }} / {{ exam.total_marks }}
                 </div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Class</div>
-                <div class="text-body1">{{ exam.class_subject?.class?.name || 'N/A' }}</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Subject</div>
-                <div class="text-body1">{{ exam.class_subject?.subject?.name || 'N/A' }}</div>
-                <div class="text-caption text-grey-7 q-mt-xs" v-if="exam.class_subject?.subject?.code">
-                  Code: {{ exam.class_subject.subject.code }}
+                <div class="text-caption text-grey-7" v-if="props.row.marks_obtained">
+                  {{ calculatePercentage(props.row.marks_obtained) }}%
                 </div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Teacher</div>
-                <div class="text-body1" v-if="exam.teacher?.user">
-                  {{ exam.teacher.user.first_name }} {{ exam.teacher.user.last_name }}
-                </div>
-                <div class="text-body1 text-grey-7" v-else>Not assigned</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Total Marks</div>
-                <div class="text-body1">{{ exam.total_marks }}</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Weight</div>
-                <div class="text-body1">{{ exam.weight }}%</div>
-              </div>
-              <div class="col-12 col-md-6">
-                <div class="text-caption text-grey-7">Exam Date</div>
-                <div class="text-body1">{{ formatDate(exam.assessment_date) }}</div>
-              </div>
-              <div class="col-12 col-md-6" v-if="exam.due_date">
-                <div class="text-caption text-grey-7">Due Date</div>
-                <div class="text-body1">{{ formatDate(exam.due_date) }}</div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
+              </q-td>
+            </template>
 
-        <!-- Results -->
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="row items-center justify-between q-mb-md">
-              <div class="text-h6">Results</div>
-              <q-btn
-                v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
-                color="primary"
-                label="Enter Results"
-                icon="add"
-                unelevated
-                @click="enterResults"
-              />
-            </div>
+            <template v-slot:body-cell-grade="props">
+              <q-td :props="props">
+                <q-badge
+                  v-if="props.row.grade"
+                  :color="getGradeColor(props.row.grade)"
+                  :label="props.row.grade"
+                />
+                <span v-else class="text-grey-7">-</span>
+              </q-td>
+            </template>
+          </q-table>
+          <div v-else class="empty-text">
+            No results entered yet. Click "Enter Results" to add student scores.
+          </div>
+        </div>
 
-            <q-table
-              v-if="results.length > 0"
-              :rows="results"
-              :columns="resultColumns"
-              row-key="id"
-              flat
-            >
-              <template v-slot:body-cell-student="props">
-                <q-td :props="props">
-                  <div class="text-body2">{{ props.row.student?.full_name || 'N/A' }}</div>
-                  <div class="text-caption text-grey-7">{{ props.row.student?.student_number || '' }}</div>
-                </q-td>
-              </template>
+        <div v-if="results.length === 0" class="mobile-empty-text">
+          No results entered yet. Click "Enter Results" to add student scores.
+        </div>
+      </MobileCard>
 
-              <template v-slot:body-cell-marks="props">
-                <q-td :props="props">
-                  <div class="text-body2">
-                    {{ props.row.marks_obtained || '-' }} / {{ exam.total_marks }}
-                  </div>
-                  <div class="text-caption text-grey-7" v-if="props.row.marks_obtained">
-                    {{ calculatePercentage(props.row.marks_obtained) }}%
-                  </div>
-                </q-td>
-              </template>
-
-              <template v-slot:body-cell-grade="props">
-                <q-td :props="props">
-                  <q-badge
-                    v-if="props.row.grade"
-                    :color="getGradeColor(props.row.grade)"
-                    :label="props.row.grade"
-                  />
-                  <span v-else class="text-grey-7">-</span>
-                </q-td>
-              </template>
-            </q-table>
-
-            <div v-else class="text-body2 text-grey-7 text-center q-pa-lg">
-              No results entered yet. Click "Enter Results" to add student scores.
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="col-12 col-md-4">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Quick Actions</div>
-            <div class="q-gutter-sm">
-              <q-btn
-                flat
-                color="primary"
-                icon="assignment"
-                label="View Class"
-                @click="viewClass"
-                class="full-width"
-              />
-              <q-btn
-                flat
-                color="primary"
-                icon="book"
-                label="View Subject"
-                @click="viewSubject"
-                class="full-width"
-              />
-              <q-btn
-                flat
-                color="primary"
-                icon="calendar_today"
-                label="View Term"
-                @click="viewTerm"
-                class="full-width"
-              />
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
+      <!-- Quick Actions Card -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Quick Actions</div>
+        <div class="action-buttons">
+          <q-btn
+            flat
+            color="primary"
+            icon="assignment"
+            label="View Class"
+            @click="viewClass"
+            class="full-width q-mb-sm"
+          />
+          <q-btn
+            flat
+            color="primary"
+            icon="book"
+            label="View Subject"
+            @click="viewSubject"
+            class="full-width q-mb-sm"
+          />
+          <q-btn
+            flat
+            color="primary"
+            icon="calendar_today"
+            label="View Term"
+            @click="viewTerm"
+            class="full-width"
+          />
+        </div>
+      </MobileCard>
     </div>
 
     <!-- Edit Dialog -->
@@ -298,7 +329,7 @@
     </q-dialog>
   </q-page>
 
-  <q-page v-else class="q-pa-lg flex flex-center">
+  <q-page v-else class="exam-detail-page flex flex-center">
     <q-spinner color="primary" size="3em" />
   </q-page>
 </template>
@@ -308,6 +339,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -564,11 +597,172 @@ function getGradeColor(grade) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.exam-detail-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
+  }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.info-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-value {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.info-sublabel {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.mobile-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.result-card {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+}
+
+.result-student-name {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.result-student-id {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.result-details {
+  margin-top: var(--spacing-xs);
+}
+
+.result-marks {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.marks-value {
+  font-weight: 600;
+  font-size: var(--font-size-lg);
+}
+
+.marks-total {
+  color: var(--text-secondary);
+}
+
+.marks-percentage {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  margin-left: var(--spacing-xs);
+}
+
+.result-remarks {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.mobile-empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-lg);
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
 }
 
 .edit-dialog-card {

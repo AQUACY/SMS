@@ -1,28 +1,23 @@
 <template>
   <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center q-mb-sm">
-        <div class="col">
-          <div class="text-h5 text-weight-bold">My Children</div>
-          <div class="text-body2 text-grey-7">View your linked children</div>
-        </div>
+    <MobilePageHeader
+      title="My Children"
+      subtitle="View your linked children"
+    >
+      <template v-slot:actions>
         <q-btn
-          round
           color="primary"
+          :label="$q.screen.gt.xs ? 'Link Child' : ''"
           icon="add"
           unelevated
-          size="md"
           to="/app/parent/link-child"
-          class="q-ml-sm"
-        >
-          <q-tooltip>Link Another Child</q-tooltip>
-        </q-btn>
-      </div>
-    </div>
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
     <!-- Content Area -->
-    <div class="parent-content q-pa-md">
+    <div class="parent-content">
       <!-- Skeleton Loading -->
       <div v-if="loading" class="q-gutter-md">
         <div
@@ -60,119 +55,19 @@
         />
       </div>
 
-      <div v-else class="q-gutter-md">
-        <q-card
+      <div v-else class="children-cards">
+        <MobileListCard
           v-for="child in children"
           :key="child.id"
-          class="child-card"
+          :title="getFullName(child)"
+          :subtitle="`ID: ${child.student_number || 'N/A'}`"
+          :description="getChildDescription(child)"
+          icon="child_care"
+          :badge="child.has_active_subscription ? 'Active' : 'No Subscription'"
+          :badge-color="child.has_active_subscription ? 'positive' : 'warning'"
+          icon-bg="rgba(156, 39, 176, 0.1)"
           @click="viewChild(child)"
-        >
-          <q-card-section class="q-pa-md">
-            <div class="row items-center q-mb-md">
-              <q-avatar size="64px" color="primary" class="q-mr-md">
-                <q-icon name="person" size="36px" color="white" />
-              </q-avatar>
-              <div class="col">
-                <div class="text-h6 text-weight-bold q-mb-xs">{{ getFullName(child) }}</div>
-                <div class="text-body2 text-grey-7">{{ child.student_number }}</div>
-              </div>
-            </div>
-
-            <q-separator class="q-my-md" />
-
-            <div class="q-gutter-y-sm">
-              <!-- Always visible: Name and Class -->
-              <div v-if="child.active_enrollment?.class" class="info-row">
-                <div class="text-caption text-grey-7 q-mb-xs">Current Class</div>
-                <div class="text-body1 text-weight-medium">{{ child.active_enrollment.class.name }}</div>
-              </div>
-
-              <!-- Blurred content if no active subscription -->
-              <div
-                v-if="!child.has_active_subscription"
-                class="blurred-content"
-              >
-                <div v-if="child.gender">
-                  <div class="text-caption text-grey-7">Gender</div>
-                  <div class="text-body2 blur-text">{{ child.gender }}</div>
-                </div>
-                <div v-if="child.date_of_birth">
-                  <div class="text-caption text-grey-7">Date of Birth</div>
-                  <div class="text-body2 blur-text">{{ formatDate(child.date_of_birth) }}</div>
-                </div>
-                <div v-if="child.email">
-                  <div class="text-caption text-grey-7">Email</div>
-                  <div class="text-body2 blur-text">{{ child.email }}</div>
-                </div>
-                <div v-if="child.phone">
-                  <div class="text-caption text-grey-7">Phone</div>
-                  <div class="text-body2 blur-text">{{ child.phone }}</div>
-                </div>
-              </div>
-
-              <!-- Clear content if has active subscription -->
-              <div v-else>
-                <div v-if="child.gender">
-                  <div class="text-caption text-grey-7">Gender</div>
-                  <div class="text-body2">{{ child.gender }}</div>
-                </div>
-                <div v-if="child.date_of_birth">
-                  <div class="text-caption text-grey-7">Date of Birth</div>
-                  <div class="text-body2">{{ formatDate(child.date_of_birth) }}</div>
-                </div>
-                <div v-if="child.email">
-                  <div class="text-caption text-grey-7">Email</div>
-                  <div class="text-body2">{{ child.email }}</div>
-                </div>
-                <div v-if="child.phone">
-                  <div class="text-caption text-grey-7">Phone</div>
-                  <div class="text-body2">{{ child.phone }}</div>
-                </div>
-              </div>
-
-              <!-- Subscription Status Badge -->
-              <div class="q-mt-sm">
-                <q-badge
-                  v-if="child.has_active_subscription"
-                  color="positive"
-                  label="Subscribed"
-                  icon="check_circle"
-                  size="md"
-                />
-                <q-badge
-                  v-else
-                  color="warning"
-                  label="Subscription Required"
-                  icon="lock"
-                  size="md"
-                />
-              </div>
-            </div>
-          </q-card-section>
-
-          <q-card-actions class="q-pa-md q-pt-none">
-            <q-btn
-              flat
-              label="View Details"
-              color="primary"
-              icon="chevron_right"
-              icon-right="chevron_right"
-              @click.stop="viewChild(child)"
-              class="full-width"
-              size="md"
-            />
-            <!-- <q-btn
-              v-if="!child.has_active_subscription"
-              flat
-              label="Subscribe"
-              color="positive"
-              icon="payment"
-              @click.stop="subscribe(child)"
-              class="full-width q-mt-sm"
-              size="md"
-            /> -->
-          </q-card-actions>
-        </q-card>
+        />
       </div>
     </div>
   </q-page>
@@ -183,6 +78,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import api from 'src/services/api';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 
 const router = useRouter();
 const $q = useQuasar();
@@ -255,6 +152,19 @@ function formatDate(date) {
     return 'N/A';
   }
 }
+
+function getChildDescription(child) {
+  const parts = [];
+  if (child.active_enrollment?.class) {
+    parts.push(`Class: ${child.active_enrollment.class.name}`);
+  }
+  if (child.has_active_subscription) {
+    parts.push('Active Subscription');
+  } else {
+    parts.push('No Active Subscription');
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
@@ -274,20 +184,17 @@ function formatDate(date) {
 .parent-content {
   max-width: 1200px;
   margin: 0 auto;
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.child-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  cursor: pointer;
-  background: white;
-
-  &:active {
-    transform: scale(0.98);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-  }
+.children-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .info-row {

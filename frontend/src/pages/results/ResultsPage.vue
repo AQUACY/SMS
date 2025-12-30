@@ -1,22 +1,47 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Results</div>
-        <div class="text-body2 text-grey-7">View and manage student results</div>
-      </div>
-      <q-btn
-        v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Enter Results"
-        icon="edit"
-        unelevated
-        to="/app/results/enter"
-      />
+  <q-page class="results-page">
+    <!-- Mobile Header -->
+    <div class="mobile-only">
+      <MobilePageHeader
+        title="Results"
+        subtitle="View and manage student results"
+      >
+        <template #actions>
+          <q-btn
+            v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="edit"
+            color="primary"
+            to="/app/results/enter"
+          >
+            <q-tooltip>Enter Results</q-tooltip>
+          </q-btn>
+        </template>
+      </MobilePageHeader>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
+    <!-- Desktop Header -->
+    <div class="desktop-only q-pa-lg">
+      <div class="row items-center justify-between q-mb-lg">
+        <div>
+          <div class="text-h5 text-weight-bold">Results</div>
+          <div class="text-body2 text-grey-7">View and manage student results</div>
+        </div>
+        <q-btn
+          v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          label="Enter Results"
+          icon="edit"
+          unelevated
+          to="/app/results/enter"
+        />
+      </div>
+    </div>
+
+    <div class="page-content">
+      <MobileCard variant="default" padding="md">
         <div class="row q-mb-md">
           <div class="col-12 col-md-3">
             <q-select
@@ -103,7 +128,46 @@
           </div>
         </div>
 
-        <q-table
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="results.length === 0" class="empty-state">
+            <q-icon name="assignment" size="64px" color="grey-5" />
+            <div class="empty-text">No Results Found</div>
+            <div class="empty-subtext">No results found for the selected filters.</div>
+          </div>
+          <div v-else class="results-list">
+            <MobileListCard
+              v-for="result in results"
+              :key="result.id"
+              :title="result.student?.full_name || getStudentName(result.student)"
+              :subtitle="result.assessment?.name || 'N/A'"
+              :description="`${result.assessment?.class_subject?.subject?.name || ''} - ${result.assessment?.class_subject?.class?.name || ''}`"
+              icon="assignment"
+              :badge="result.grade || '-'"
+              :badge-color="result.grade ? getGradeColor(result.grade) : 'grey'"
+              :clickable="true"
+              @click="viewStudentResults(result.student?.id)"
+            >
+              <template #extra>
+                <div class="result-marks">
+                  <div class="marks-display">
+                    {{ result.marks_obtained || '-' }} / {{ result.assessment?.total_marks || '-' }}
+                  </div>
+                  <div v-if="result.marks_obtained && result.assessment?.total_marks" class="percentage">
+                    {{ calculatePercentage(result.marks_obtained, result.assessment.total_marks) }}%
+                  </div>
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="results"
           :columns="columns"
           row-key="id"
@@ -170,9 +234,10 @@
               />
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -181,6 +246,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -359,10 +427,79 @@ function getGradeColor(grade) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.results-page {
+  padding: 0;
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: 0;
+  }
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.result-marks {
+  text-align: right;
+}
+
+.marks-display {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.percentage {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>

@@ -1,95 +1,227 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Assessments</div>
-        <div class="text-body2 text-grey-7">View and manage all assessments</div>
+  <q-page class="assessments-list-page">
+    <MobilePageHeader
+      title="Assessments"
+      subtitle="View and manage all assessments"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Create Assessment' : ''"
+          icon="add"
+          unelevated
+          to="/app/assessments/create"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filterTerm"
+          :options="terms"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Term"
+          @update:model-value="onFilter"
+          :loading="loadingTerms"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterType"
+          :options="typeOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Type"
+          @update:model-value="onFilter"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterClass"
+          :options="classes"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Class"
+          @update:model-value="onFilter"
+          :loading="loadingClasses"
+          class="filter-item"
+        />
+        <q-input
+          v-model="searchQuery"
+          outlined
+          dense
+          placeholder="Search assessments..."
+          @update:model-value="onSearch"
+          clearable
+          class="filter-item"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
       </div>
-      <q-btn
-        v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Create Assessment"
-        icon="add"
-        unelevated
-        to="/app/assessments/create"
-      />
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="assessments.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="assessment in assessments"
+          :key="assessment.id"
+          :title="assessment.title || 'Assessment'"
+          :subtitle="assessment.class_subject?.subject?.name || 'N/A'"
+          :description="getAssessmentDescription(assessment)"
+          icon="assignment"
+          :badge="assessment.is_finalized ? 'Finalized' : 'Pending'"
+          :badge-color="assessment.is_finalized ? 'positive' : 'warning'"
+          icon-bg="rgba(255, 152, 0, 0.1)"
+          @click="viewAssessment(assessment.id)"
+        >
+          <template v-slot:extra>
+            <div class="assessment-details">
+              <div class="detail-item">
+                <div class="detail-label">Total Marks</div>
+                <div class="detail-value">{{ assessment.total_marks }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Weight</div>
+                <div class="detail-value">{{ assessment.weight }}%</div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewAssessment(assessment.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="!assessment.is_finalized && (authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin)"
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editAssessment(assessment.id)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="assignment" size="64px" color="grey-5" />
+        <div class="empty-text">No assessments found</div>
+      </div>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="row q-mb-md">
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filterTerm"
-              :options="terms"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Term"
-              @update:model-value="onFilter"
-              :loading="loadingTerms"
-            />
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-mb-md">
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="filterTerm"
+                :options="terms"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Term"
+                @update:model-value="onFilter"
+                :loading="loadingTerms"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="filterType"
+                :options="typeOptions"
+                option-label="label"
+                option-value="value"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Type"
+                @update:model-value="onFilter"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="filterClass"
+                :options="classes"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Class"
+                @update:model-value="onFilter"
+                :loading="loadingClasses"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-input
+                v-model="searchQuery"
+                outlined
+                dense
+                placeholder="Search assessments..."
+                @update:model-value="onSearch"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
           </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filterType"
-              :options="typeOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Type"
-              @update:model-value="onFilter"
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filterClass"
-              :options="classes"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Class"
-              @update:model-value="onFilter"
-              :loading="loadingClasses"
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-input
-              v-model="searchQuery"
-              outlined
-              dense
-              placeholder="Search assessments..."
-              @update:model-value="onSearch"
-              clearable
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-        </div>
 
-        <q-table
-          :rows="assessments"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="assessments"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-type="props">
             <q-td :props="props">
               <q-badge
@@ -184,7 +316,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -193,6 +326,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -509,13 +645,141 @@ function getTypeColor(type) {
   };
   return colors[type] || 'grey';
 }
+
+function getAssessmentDescription(assessment) {
+  const parts = [];
+  if (assessment.class_subject?.class?.name) {
+    parts.push(`Class: ${assessment.class_subject.class.name}`);
+  }
+  if (assessment.term?.name) {
+    parts.push(`Term: ${assessment.term.name}`);
+  }
+  if (assessment.assessment_date) {
+    parts.push(`Date: ${formatDate(assessment.assessment_date)}`);
+  }
+  if (assessment.type) {
+    parts.push(`Type: ${formatType(assessment.type)}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
+.assessments-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.assessment-details {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  
+  .detail-item {
+    .detail-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .detail-value {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>

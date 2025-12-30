@@ -1,44 +1,43 @@
 <template>
-  <q-page class="q-pa-lg" v-if="reportCard">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="$router.push('/app/report-cards')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Report Card</div>
-        <div class="text-body2 text-grey-7">
-          {{ reportCard.student?.full_name || 'N/A' }} - {{ reportCard.term?.name || 'N/A' }}
-        </div>
-      </div>
-      <q-space />
-      <q-btn
-        flat
-        label="Preview PDF"
-        color="primary"
-        icon="visibility"
-        :loading="generatingPdf"
-        @click="previewPdf"
-        class="q-mr-sm"
-      />
-      <q-btn
-        flat
-        label="Download PDF"
-        color="negative"
-        icon="download"
-        :loading="generatingPdf"
-        @click="downloadPdf"
-      />
-    </div>
+  <q-page class="report-card-view-page" v-if="reportCard">
+    <MobilePageHeader
+      title="Report Card"
+      :subtitle="`${reportCard.student?.full_name || 'N/A'} - ${reportCard.term?.name || 'N/A'}`"
+      :show-back="true"
+      @back="$router.push('/app/report-cards')"
+    >
+      <template #actions>
+        <q-btn
+          flat
+          round
+          dense
+          icon="visibility"
+          color="primary"
+          :loading="generatingPdf"
+          @click="previewPdf"
+          class="q-mr-xs"
+        >
+          <q-tooltip>Preview PDF</q-tooltip>
+        </q-btn>
+        <q-btn
+          flat
+          round
+          dense
+          icon="download"
+          color="negative"
+          :loading="generatingPdf"
+          @click="downloadPdf"
+        >
+          <q-tooltip>Download PDF</q-tooltip>
+        </q-btn>
+      </template>
+    </MobilePageHeader>
 
-    <div class="row q-col-gutter-md">
-      <!-- Student Information -->
-      <div class="col-12 col-md-4">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Student Information</div>
+    <div class="page-content">
+      <div class="detail-grid">
+        <!-- Student Information -->
+        <MobileCard variant="default" padding="md">
+          <div class="card-title">Student Information</div>
             <div class="q-gutter-sm">
               <div>
                 <div class="text-caption text-grey-7">Name</div>
@@ -57,12 +56,10 @@
                 <div class="text-body1">{{ reportCard.student.gender }}</div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
 
-        <q-card class="widget-card q-mt-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Term Information</div>
+        <MobileCard variant="default" padding="md">
+          <div class="card-title">Term Information</div>
             <div class="q-gutter-sm">
               <div>
                 <div class="text-caption text-grey-7">Term</div>
@@ -81,16 +78,14 @@
                 <div class="text-body1">{{ formatDate(reportCard.term.end_date) }}</div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
       </div>
 
       <!-- Results and Statistics -->
-      <div class="col-12 col-md-8">
+      <div class="col-12">
         <!-- Summary Statistics -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Summary</div>
+        <MobileCard variant="default" padding="md" class="q-mb-md">
+          <div class="card-title">Summary</div>
             <div class="row q-col-gutter-md">
               <div class="col-6 col-md-3">
                 <div class="text-caption text-grey-7">Total Subjects</div>
@@ -119,13 +114,46 @@
                 </div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
 
         <!-- Results Table -->
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Subject Results</div>
+        <MobileCard variant="default" padding="md">
+          <div class="card-title">Subject Results</div>
+          
+          <!-- Mobile View: Card List -->
+          <div class="mobile-only">
+            <div v-if="!reportCard.results || reportCard.results.length === 0" class="empty-state">
+              <q-icon name="assignment" size="64px" color="grey-5" />
+              <div class="empty-text">No Results</div>
+              <div class="empty-subtext">No results found for this term.</div>
+            </div>
+            <div v-else class="results-list">
+              <MobileListCard
+                v-for="result in reportCard.results"
+                :key="result.id"
+                :title="result.assessment?.subject?.name || 'N/A'"
+                :subtitle="result.assessment?.name || 'N/A'"
+                :description="`${result.assessment?.type || ''} | Weight: ${result.assessment?.weight || 0}%`"
+                icon="assignment"
+                :badge="result.grade || '-'"
+                :badge-color="result.grade ? getGradeColor(result.grade) : 'grey'"
+              >
+                <template #extra>
+                  <div class="result-marks">
+                    <div class="marks-display">
+                      {{ result.marks_obtained || '-' }} / {{ result.assessment?.total_marks || '-' }}
+                    </div>
+                    <div v-if="result.marks_obtained && result.assessment?.total_marks" class="percentage">
+                      {{ calculatePercentage(result.marks_obtained, result.assessment.total_marks) }}%
+                    </div>
+                  </div>
+                </template>
+              </MobileListCard>
+            </div>
+          </div>
+
+          <!-- Desktop View: Table -->
+          <div class="desktop-only">
             <q-table
               v-if="reportCard.results && reportCard.results.length > 0"
               :rows="reportCard.results"
@@ -171,18 +199,16 @@
                 </q-td>
               </template>
             </q-table>
-
-            <div v-else class="text-body2 text-grey-7 text-center q-pa-lg">
-              No results found for this term.
-            </div>
-          </q-card-section>
-        </q-card>
+          </div>
+        </MobileCard>
       </div>
     </div>
   </q-page>
 
-  <q-page v-else class="q-pa-lg flex flex-center">
-    <q-spinner color="primary" size="3em" />
+  <q-page v-else class="detail-loading">
+    <div class="loading-center">
+      <q-spinner color="primary" size="3em" />
+    </div>
   </q-page>
 </template>
 
@@ -191,6 +217,9 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -373,10 +402,106 @@ function getGradeColor(grade) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.report-card-view-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.result-marks {
+  text-align: right;
+}
+
+.marks-display {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.percentage {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>

@@ -1,15 +1,13 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Attendance Reports</div>
-        <div class="text-body2 text-grey-7">View attendance statistics and reports</div>
-      </div>
-    </div>
+  <q-page class="attendance-reports-page">
+    <MobilePageHeader
+      title="Attendance Reports"
+      subtitle="View attendance statistics and reports"
+    />
 
-    <!-- Filters -->
-    <q-card class="widget-card q-mb-md">
-      <q-card-section>
+    <div class="page-content">
+      <!-- Filters -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-3">
             <q-select
@@ -56,50 +54,60 @@
             />
           </div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <!-- Overall Statistics -->
-    <div v-if="reports.overall" class="row q-col-gutter-md q-mb-md">
-      <div class="col-12 col-md-3">
-        <q-card class="stat-card bg-positive text-white">
-          <q-card-section>
-            <div class="text-h6">Total Days</div>
-            <div class="text-h4">{{ reports.overall.total_days }}</div>
-          </q-card-section>
-        </q-card>
+      <!-- Overall Statistics -->
+      <div v-if="reports.overall" class="stats-grid q-mb-md">
+        <MobileCard variant="default" padding="md" class="stat-card-positive">
+          <div class="stat-label">Total Days</div>
+          <div class="stat-value-large">{{ reports.overall.total_days }}</div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md" class="stat-card-positive">
+          <div class="stat-label">Present</div>
+          <div class="stat-value-large">{{ reports.overall.present }}</div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md" class="stat-card-negative">
+          <div class="stat-label">Absent</div>
+          <div class="stat-value-large">{{ reports.overall.absent }}</div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md" class="stat-card-info">
+          <div class="stat-label">Attendance Rate</div>
+          <div class="stat-value-large">{{ reports.overall.attendance_rate }}%</div>
+        </MobileCard>
       </div>
-      <div class="col-12 col-md-3">
-        <q-card class="stat-card bg-positive text-white">
-          <q-card-section>
-            <div class="text-h6">Present</div>
-            <div class="text-h4">{{ reports.overall.present }}</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-3">
-        <q-card class="stat-card bg-negative text-white">
-          <q-card-section>
-            <div class="text-h6">Absent</div>
-            <div class="text-h4">{{ reports.overall.absent }}</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-3">
-        <q-card class="stat-card bg-info text-white">
-          <q-card-section>
-            <div class="text-h6">Attendance Rate</div>
-            <div class="text-h4">{{ reports.overall.attendance_rate }}%</div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
 
-    <!-- By Class -->
-    <q-card v-if="reports.by_class && reports.by_class.length > 0" class="widget-card q-mb-md">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Attendance by Class</div>
-        <q-table
+      <!-- By Class -->
+      <MobileCard v-if="reports.by_class && reports.by_class.length > 0" variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Attendance by Class</div>
+        
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div class="class-reports-list">
+            <MobileListCard
+              v-for="classReport in reports.by_class"
+              :key="classReport.class_id"
+              :title="classReport.class_name"
+              :subtitle="`Total: ${classReport.total}`"
+              :description="`Present: ${classReport.present} | Absent: ${classReport.absent} | Late: ${classReport.late} | Excused: ${classReport.excused}`"
+              icon="class"
+              :badge="`${classReport.attendance_rate}%`"
+              :badge-color="classReport.attendance_rate >= 80 ? 'positive' : classReport.attendance_rate >= 60 ? 'warning' : 'negative'"
+            >
+              <template #extra>
+                <q-linear-progress
+                  :value="classReport.attendance_rate / 100"
+                  :color="classReport.attendance_rate >= 80 ? 'positive' : classReport.attendance_rate >= 60 ? 'warning' : 'negative'"
+                  class="q-mt-sm"
+                  style="width: 100px;"
+                />
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="reports.by_class"
           :columns="classColumns"
           flat
@@ -115,15 +123,31 @@
               <div class="text-caption q-mt-xs">{{ props.value }}%</div>
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
 
-    <!-- By Date -->
-    <q-card v-if="reports.by_date && reports.by_date.length > 0" class="widget-card">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Attendance by Date</div>
-        <q-table
+      <!-- By Date -->
+      <MobileCard v-if="reports.by_date && reports.by_date.length > 0" variant="default" padding="md">
+        <div class="card-title">Attendance by Date</div>
+        
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div class="date-reports-list">
+            <MobileListCard
+              v-for="dateReport in reports.by_date"
+              :key="dateReport.date"
+              :title="formatDate(dateReport.date)"
+              :subtitle="`Total: ${dateReport.total}`"
+              :description="`Present: ${dateReport.present} | Absent: ${dateReport.absent} | Late: ${dateReport.late} | Excused: ${dateReport.excused}`"
+              icon="event"
+            />
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="reports.by_date"
           :columns="dateColumns"
           flat
@@ -134,33 +158,33 @@
               {{ formatDate(props.value) }}
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
 
-    <q-card v-if="loading" class="widget-card">
-      <q-card-section>
-        <div class="row justify-center q-pa-xl">
+      <MobileCard v-if="loading" variant="default" padding="lg">
+        <div class="loading-center">
           <q-spinner color="primary" size="3em" />
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <q-card v-else-if="!reports.overall" class="widget-card">
-      <q-card-section>
-        <div class="text-center q-pa-lg">
+      <MobileCard v-else-if="!reports.overall" variant="default" padding="lg">
+        <div class="empty-state">
           <q-icon name="bar_chart" size="48px" color="grey-6" />
-          <div class="text-h6 q-mt-md">No Reports Available</div>
-          <div class="text-body2 text-grey-7">Select filters and click "Generate Report" to view attendance statistics.</div>
+          <div class="empty-text">No Reports Available</div>
+          <div class="empty-subtext">Select filters to view attendance statistics.</div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const $q = useQuasar();
@@ -367,14 +391,111 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.attendance-reports-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.stat-card {
-  border-radius: 16px;
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-card-positive {
+  background: linear-gradient(135deg, var(--q-positive) 0%, var(--q-positive-dark) 100%);
+  color: white;
+}
+
+.stat-card-negative {
+  background: linear-gradient(135deg, var(--q-negative) 0%, var(--q-negative-dark) 100%);
+  color: white;
+}
+
+.stat-card-info {
+  background: linear-gradient(135deg, var(--q-info) 0%, var(--q-info-dark) 100%);
+  color: white;
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  opacity: 0.9;
+  margin-bottom: var(--spacing-xs);
+}
+
+.stat-value-large {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.class-reports-list,
+.date-reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.loading-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>

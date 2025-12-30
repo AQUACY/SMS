@@ -173,6 +173,8 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware('role:super_admin,school_admin,accounts_manager');
     Route::post('/payments/initiate-fee', [PaymentController::class, 'initiateFeePayment'])->middleware('role:school_admin,accounts_manager');
     Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('api.payments.webhook'); // Public webhook endpoint
+    Route::get('/payments/{payment}/receipt', [PaymentController::class, 'downloadReceipt'])->middleware('role:super_admin,school_admin,accounts_manager,parent');
+    Route::post('/payments/{payment}/receipt/email', [PaymentController::class, 'emailReceipt'])->middleware('role:super_admin,school_admin,accounts_manager,parent');
     
     // Fees Management (School Admin & Accounts Manager)
     Route::apiResource('fees', FeeController::class)->middleware('role:super_admin,school_admin,accounts_manager');

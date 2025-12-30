@@ -1,69 +1,169 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Subscription Prices</div>
-        <div class="text-body2 text-grey-7">Manage subscription pricing for the platform</div>
-      </div>
-      <div>
+  <q-page class="subscription-prices-list-page">
+    <MobilePageHeader
+      title="Subscription Prices"
+      subtitle="Manage subscription pricing for the platform"
+    >
+      <template v-slot:actions>
         <q-btn
           color="primary"
-          label="Add Price"
+          :label="$q.screen.gt.xs ? 'Add Price' : ''"
           icon="add"
           unelevated
           to="/app/subscription-prices/create"
+          class="mobile-btn"
         />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filters.price_type"
+          :options="priceTypeOptions"
+          label="Filter by Type"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchPrices"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filters.school_id"
+          :options="schools"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Filter by School"
+          outlined
+          dense
+          clearable
+          :loading="loadingSchools"
+          @update:model-value="fetchPrices"
+          class="filter-item"
+        />
+        <div class="filter-item">
+          <q-toggle
+            v-model="filters.is_active"
+            label="Active Only"
+            @update:model-value="fetchPrices"
+          />
+        </div>
+      </div>
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="prices.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="price in prices"
+          :key="price.id"
+          :title="price.name"
+          :subtitle="price.scope_description || 'N/A'"
+          :description="getPriceDescription(price)"
+          icon="attach_money"
+          :badge="price.is_active ? 'Active' : 'Inactive'"
+          :badge-color="price.is_active ? 'positive' : 'negative'"
+          icon-bg="rgba(255, 193, 7, 0.1)"
+          @click="editPrice(price.id)"
+        >
+          <template v-slot:extra>
+            <div class="price-amount">
+              <div class="amount-label">Price</div>
+              <div class="amount-value">
+                {{ formatCurrency(price.amount) }} {{ price.currency || 'GHS' }}
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editPrice(price.id)"
+                size="sm"
+              />
+              <q-btn
+                flat
+                dense
+                icon="delete"
+                color="negative"
+                label="Delete"
+                @click.stop="confirmDelete(price)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="attach_money" size="64px" color="grey-5" />
+        <div class="empty-text">No subscription prices found</div>
       </div>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="row q-gutter-md q-mb-md">
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.price_type"
-              :options="priceTypeOptions"
-              label="Filter by Type"
-              outlined
-              dense
-              clearable
-              @update:model-value="fetchPrices"
-            />
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-gutter-md q-mb-md">
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="filters.price_type"
+                :options="priceTypeOptions"
+                label="Filter by Type"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchPrices"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="filters.school_id"
+                :options="schools"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                label="Filter by School"
+                outlined
+                dense
+                clearable
+                :loading="loadingSchools"
+                @update:model-value="fetchPrices"
+              />
+            </div>
+            <div class="col-12 col-md-3">
+              <q-toggle
+                v-model="filters.is_active"
+                label="Active Only"
+                @update:model-value="fetchPrices"
+              />
+            </div>
           </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.school_id"
-              :options="schools"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              label="Filter by School"
-              outlined
-              dense
-              clearable
-              :loading="loadingSchools"
-              @update:model-value="fetchPrices"
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-toggle
-              v-model="filters.is_active"
-              label="Active Only"
-              @update:model-value="fetchPrices"
-            />
-          </div>
-        </div>
 
-        <q-table
-          :rows="prices"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="prices"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-scope="props">
             <q-td :props="props">
               <q-badge
@@ -111,7 +211,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -119,6 +220,9 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -277,14 +381,135 @@ function formatCurrency(amount) {
   if (!amount) return '0.00';
   return parseFloat(amount).toFixed(2);
 }
+
+function getPriceDescription(price) {
+  const parts = [];
+  if (price.school?.name) {
+    parts.push(`School: ${price.school.name}`);
+  } else {
+    parts.push('Global (All Schools)');
+  }
+  if (price.price_type) {
+    const typeLabel = priceTypeOptions.find(opt => opt.value === price.price_type)?.label || price.price_type;
+    parts.push(`Type: ${typeLabel}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
+.subscription-prices-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.price-amount {
+  margin-bottom: var(--spacing-sm);
+  
+  .amount-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .amount-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>
 

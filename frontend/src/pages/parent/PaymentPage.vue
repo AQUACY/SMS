@@ -1,35 +1,22 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="$router.push('/app/parent/payments')"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">
-            {{ paymentType === 'fee' ? 'Pay School Fees' : 'Subscribe' }}
-          </div>
-          <div class="text-caption text-grey-7">
-            {{ paymentType === 'fee' ? 'Pay term fees to the school' : 'Subscribe to view academic records' }}
-          </div>
-        </div>
-      </div>
+  <q-page class="payment-page">
+    <MobilePageHeader
+      :title="paymentType === 'fee' ? 'Pay School Fees' : 'Subscribe'"
+      :subtitle="paymentType === 'fee' ? 'Pay term fees to the school' : 'Subscribe to view academic records'"
+      :show-back="true"
+      @back="$router.push('/app/parent/payments')"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <div v-if="loading" class="text-center q-pa-xl">
-        <q-spinner color="primary" size="3em" />
-      </div>
-
-      <q-card v-else class="form-card">
-        <q-card-section class="q-pa-md">
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
           <q-banner 
             v-if="paymentType === 'fee'"
             rounded 
@@ -326,8 +313,7 @@
               />
             </div>
           </q-form>
-        </q-card-section>
-      </q-card>
+      </MobileCard>
     </div>
   </q-page>
 </template>
@@ -336,6 +322,8 @@
 import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -835,45 +823,28 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.payment-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.parent-content {
+.form-content {
   max-width: 800px;
   margin: 0 auto;
 }
 
-.form-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
-}
-
 .summary-card {
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #f9f9f9;
-}
-
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
-
-  .parent-content {
-    padding: 12px;
-  }
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+  background: var(--bg-secondary);
 }
 </style>

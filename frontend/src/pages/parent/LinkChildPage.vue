@@ -1,30 +1,18 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="router.push('/app/parent/children')"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">Link Your Child</div>
-          <div class="text-caption text-grey-7">Add a child to your account</div>
-        </div>
-      </div>
-    </div>
+  <q-page class="link-child-page">
+    <MobilePageHeader
+      title="Link Your Child"
+      subtitle="Add a child to your account"
+      :show-back="true"
+      @back="router.push('/app/parent/children')"
+    />
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <q-card class="form-card">
-        <q-card-section class="text-center q-pa-lg">
+    <div class="form-content">
+      <MobileCard variant="default" padding="lg">
+        <div class="link-child-content">
           <q-icon name="child_care" size="56px" color="primary" class="q-mb-md" />
-          <div class="text-h6 text-weight-bold q-mb-sm">Link Your Child</div>
-          <div class="text-body2 text-grey-7 q-mb-lg">
+          <div class="link-title">Link Your Child</div>
+          <div class="link-description">
             Enter the Student Number provided by the school (e.g., BA01-STU001)
           </div>
 
@@ -81,8 +69,8 @@
               />
             </div>
           </q-form>
-        </q-card-section>
-      </q-card>
+        </div>
+      </MobileCard>
     </div>
   </q-page>
 </template>
@@ -91,6 +79,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -169,41 +159,35 @@ async function linkChild() {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.link-child-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.parent-content {
+.form-content {
   max-width: 600px;
   margin: 0 auto;
-  padding-top: 24px;
 }
 
-.form-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+.link-child-content {
+  text-align: center;
+  padding: var(--spacing-lg);
 }
 
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
+.link-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
 
-  .parent-content {
-    padding: 16px;
-  }
+.link-description {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-lg);
 }
 </style>
 

@@ -1,74 +1,164 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Subjects</div>
-        <div class="text-body2 text-grey-7">Manage all subjects</div>
-      </div>
-      <div>
+  <q-page class="subjects-list-page">
+    <MobilePageHeader
+      title="Subjects"
+      subtitle="Manage all subjects"
+    >
+      <template v-slot:actions>
         <q-btn
           v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
           color="secondary"
-          label="Import Excel"
+          :label="$q.screen.gt.xs ? 'Import Excel' : ''"
           icon="upload"
           unelevated
           @click="showImportDialog = true"
-          class="q-mr-sm"
+          class="mobile-btn q-mr-xs"
         />
         <q-btn
           v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
           color="primary"
-          label="Add Subject"
+          :label="$q.screen.gt.xs ? 'Add Subject' : ''"
           icon="add"
           unelevated
           to="/app/subjects/create"
+          class="mobile-btn"
         />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-input
+          v-model="searchQuery"
+          placeholder="Search subjects..."
+          outlined
+          dense
+          clearable
+          @update:model-value="onSearch"
+          class="filter-item"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+        <q-select
+          v-model="filterCore"
+          :options="coreOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Type"
+          @update:model-value="onFilter"
+          class="filter-item"
+        />
+      </div>
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="80px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="subjects.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="subject in subjects"
+          :key="subject.id"
+          :title="subject.name"
+          :subtitle="subject.code || 'No Code'"
+          :description="getSubjectDescription(subject)"
+          icon="menu_book"
+          :badge="subject.is_core ? 'Core' : 'Elective'"
+          :badge-color="subject.is_core ? 'primary' : 'grey'"
+          icon-bg="rgba(33, 150, 243, 0.1)"
+          @click="viewSubject(subject.id)"
+        >
+          <template v-slot:extra>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewSubject(subject.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editSubject(subject.id)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="menu_book" size="64px" color="grey-5" />
+        <div class="empty-text">No subjects found</div>
       </div>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="row q-mb-md">
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="searchQuery"
-              placeholder="Search subjects..."
-              outlined
-              dense
-              clearable
-              @update:model-value="onSearch"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-mb-md">
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="searchQuery"
+                placeholder="Search subjects..."
+                outlined
+                dense
+                clearable
+                @update:model-value="onSearch"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="filterCore"
+                :options="coreOptions"
+                option-label="label"
+                option-value="value"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Type"
+                @update:model-value="onFilter"
+              />
+            </div>
           </div>
-          <div class="col-12 col-md-6">
-            <q-select
-              v-model="filterCore"
-              :options="coreOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Type"
-              @update:model-value="onFilter"
-            />
-          </div>
-        </div>
 
-        <q-table
-          :rows="subjects"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="subjects"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-is_core="props">
             <q-td :props="props">
               <q-badge
@@ -100,7 +190,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
 
     <!-- Excel Import Dialog -->
     <ExcelImportDialog
@@ -119,6 +210,9 @@ import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
 import ExcelImportDialog from 'src/components/ExcelImportDialog.vue';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -243,16 +337,111 @@ const handleImportSuccess = () => {
   fetchSubjects();
 };
 
+function getSubjectDescription(subject) {
+  const parts = [];
+  if (subject.description) parts.push(subject.description);
+  if (subject.is_core) parts.push('Core Subject');
+  else parts.push('Elective Subject');
+  return parts.join(' • ') || 'No description';
+}
+
 onMounted(() => {
   fetchSubjects();
 });
 </script>
 
 <style lang="scss" scoped>
+.subjects-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>

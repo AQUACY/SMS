@@ -1,64 +1,47 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="router.back()"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">Report Cards</div>
-          <div class="text-caption text-grey-7">{{ childName }}</div>
-        </div>
-      </div>
-    </div>
+  <q-page class="child-report-cards-page">
+    <MobilePageHeader
+      title="Report Cards"
+      :subtitle="childName"
+      :show-back="true"
+      @back="router.back()"
+    />
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
+    <div class="page-content">
       <!-- Term Selection -->
-      <q-card class="info-card q-mb-md" v-if="availableTerms.length > 0">
-        <q-card-section class="q-pa-md">
-          <div class="text-body1 text-weight-medium q-mb-sm">Select Term</div>
-          <q-select
-            v-model="selectedTermId"
-            :options="availableTerms"
-            option-label="label"
-            option-value="value"
-            emit-value
-            map-options
-            outlined
-            dense
-            @update:model-value="fetchReportCard"
-            class="q-mb-sm"
-          />
-          <div v-if="selectedTerm" class="text-caption text-grey-7">
-            {{ selectedTerm.academic_year?.name }} - {{ selectedTerm.name }}
-          </div>
-        </q-card-section>
-      </q-card>
+      <MobileCard v-if="availableTerms.length > 0" variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Select Term</div>
+        <q-select
+          v-model="selectedTermId"
+          :options="availableTerms"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          outlined
+          dense
+          @update:model-value="fetchReportCard"
+          class="q-mb-sm"
+        />
+        <div v-if="selectedTerm" class="text-caption text-grey-7">
+          {{ selectedTerm.academic_year?.name }} - {{ selectedTerm.name }}
+        </div>
+      </MobileCard>
 
       <!-- Skeleton Loading -->
-      <div v-if="loading" class="q-gutter-md">
-        <q-card class="info-card">
-          <q-card-section>
-            <q-skeleton type="rect" height="200px" class="q-mb-md" />
-            <q-skeleton type="text" width="60%" />
-            <q-skeleton type="text" width="40%" />
-          </q-card-section>
-        </q-card>
+      <div v-if="loading" class="detail-loading">
+        <MobileCard v-for="i in 2" :key="i" variant="default" padding="md" class="q-mb-md">
+          <q-skeleton type="rect" height="200px" class="q-mb-md" />
+          <q-skeleton type="text" width="60%" />
+          <q-skeleton type="text" width="40%" />
+        </MobileCard>
       </div>
 
       <!-- Report Card Content -->
-      <div v-else-if="reportCard" class="q-gutter-md">
+      <div v-else-if="reportCard" class="report-card-content">
         <!-- Student Info Card -->
-        <q-card class="info-card q-mt-lg">
-          <q-card-section class="q-pa-md">
-            <div class="text-h6 q-mb-md">Student Information</div>
+        <MobileCard variant="default" padding="md" class="q-mb-md">
+          <div class="card-title">Student Information</div>
             <div class="row q-gutter-md">
               <div class="col-12 col-sm-6">
                 <div class="info-row">
@@ -85,13 +68,11 @@
                 </div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
 
         <!-- Statistics Card -->
-        <q-card class="info-card" v-if="reportCard.statistics">
-          <q-card-section class="q-pa-md">
-            <div class="text-h6 q-mb-md">Overall Performance</div>
+        <MobileCard v-if="reportCard.statistics" variant="default" padding="md" class="q-mb-md">
+          <div class="card-title">Overall Performance</div>
             <div class="row q-gutter-md">
               <div class="col-6 col-sm-3">
                 <div class="stat-item">
@@ -125,22 +106,19 @@
                 </div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
 
         <!-- Results by Subject -->
-        <q-card v-if="resultsBySubject.length > 0" class="info-card">
-          <q-card-section class="q-pa-md">
-            <div class="text-h6 q-mb-md">Subject Results</div>
-            <div class="q-gutter-sm">
-              <q-card
-                v-for="subjectGroup in resultsBySubject"
-                :key="subjectGroup.subject.id"
-                flat
-                bordered
-                class="subject-card q-mb-sm"
-              >
-                <q-card-section class="q-pa-md">
+        <MobileCard v-if="resultsBySubject.length > 0" variant="default" padding="md" class="q-mb-md">
+          <div class="card-title">Subject Results</div>
+          <div class="subjects-list">
+            <MobileCard
+              v-for="subjectGroup in resultsBySubject"
+              :key="subjectGroup.subject.id"
+              variant="default"
+              padding="md"
+              class="subject-card q-mb-sm"
+            >
                   <div class="row items-center q-mb-sm">
                     <q-icon name="menu_book" size="20px" color="primary" class="q-mr-sm" />
                     <div class="col">
@@ -189,46 +167,42 @@
                       {{ calculateSubjectAverage(subjectGroup.results) }}%
                     </div>
                   </div>
-                </q-card-section>
-              </q-card>
-            </div>
-          </q-card-section>
-        </q-card>
+            </MobileCard>
+          </div>
+        </MobileCard>
 
         <!-- Download PDF Button -->
-        <q-card class="info-card">
-          <q-card-section class="q-pa-md">
-            <q-btn
-              unelevated
-              color="primary"
-              icon="picture_as_pdf"
-              label="Download PDF"
-              @click="downloadPDF"
-              class="full-width"
-              size="lg"
-              :loading="downloading"
-            />
-          </q-card-section>
-        </q-card>
+        <MobileCard variant="default" padding="md">
+          <q-btn
+            unelevated
+            color="primary"
+            icon="picture_as_pdf"
+            label="Download PDF"
+            @click="downloadPDF"
+            class="full-width"
+            size="lg"
+            :loading="downloading"
+          />
+        </MobileCard>
       </div>
 
       <!-- Empty State -->
-      <q-card v-else-if="!loading && selectedTermId" class="info-card">
-        <q-card-section class="text-center q-pa-xl">
-          <q-icon name="description" size="64px" color="grey-5" class="q-mb-md" />
-          <div class="text-h6 text-grey-7 q-mb-sm">No Report Card Available</div>
-          <div class="text-body2 text-grey-6">
+      <MobileCard v-else-if="!loading && selectedTermId" variant="default" padding="lg">
+        <div class="empty-state">
+          <q-icon name="description" size="64px" color="grey-5" />
+          <div class="empty-text">No Report Card Available</div>
+          <div class="empty-subtext">
             Report card has not been generated for this term yet.
           </div>
-        </q-card-section>
-      </q-card>
+        </div>
+      </MobileCard>
 
       <!-- Subscription Required -->
       <q-banner
         v-if="!loading && !selectedTermId && availableTerms.length === 0"
         dense
         rounded
-        class="bg-warning text-white q-ma-md"
+        class="subscription-banner bg-warning text-white q-ma-md"
       >
         <template v-slot:avatar>
           <q-icon name="lock" color="white" />
@@ -245,6 +219,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -550,65 +526,90 @@ function getGradeColor(grade) {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.child-report-cards-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.parent-content {
+.page-content {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.info-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.stat-item {
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 12px;
-  text-align: center;
+.report-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
 }
 
 .info-row {
-  padding: 8px 0;
+  padding: var(--spacing-xs) 0;
+}
+
+.stat-item {
+  padding: var(--spacing-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
 }
 
 .subject-card {
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--bg-secondary);
 }
 
 .result-row {
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  padding: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
 
-  .parent-content {
-    padding: 12px;
-  }
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
 
-  .stat-item {
-    padding: 10px;
-  }
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
+}
+
+.subscription-banner {
+  margin: var(--spacing-md);
 }
 </style>
 

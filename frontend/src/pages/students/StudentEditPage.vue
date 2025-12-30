@@ -1,39 +1,35 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.back()"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Edit Student</div>
-        <div class="text-body2 text-grey-7">Update student information</div>
-      </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Edit Student"
+      subtitle="Update student information"
+      :show-back="true"
+      @back="router.back()"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-if="loading" class="row justify-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
-
-    <q-card v-else class="widget-card">
-      <q-card-section>
-        <q-form @submit="updateStudent" class="q-gutter-md">
-          <div class="row q-col-gutter-md q-pa-md" >
-            <!-- Left Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Basic Information</div>
-              
-              <q-input
-                v-model="studentForm.student_number"
-                label="Student Number"
-                outlined
-                hint="Auto-generated identifier (cannot be changed)"
-                readonly
-                :disable="true"
-              />
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="updateStudent" class="form">
+          <div class="form-section">
+            <div class="section-title">Basic Information</div>
+            
+            <q-input
+              v-model="studentForm.student_number"
+              label="Student Number"
+              outlined
+              hint="Auto-generated identifier (cannot be changed)"
+              readonly
+              :disable="true"
+              class="q-mb-md"
+            />
 
               <div class="row q-col-gutter-sm">
                 <q-input
@@ -96,11 +92,10 @@
                 outlined
                 :disable="saving"
               />
-            </div>
+          </div>
 
-            <!-- Right Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Additional Information</div>
+          <div class="form-section">
+            <div class="section-title">Additional Information</div>
 
               <q-input
                 v-model="studentForm.address"
@@ -138,8 +133,8 @@
 
           <q-separator class="q-my-md" />
 
-          <!-- Current Guardians Section -->
-          <div class="text-subtitle2 q-mb-sm">Current Guardians</div>
+          <div class="form-section">
+            <div class="section-title">Current Guardians</div>
           <div v-if="guardians.length > 0" class="q-mb-md">
             <q-list bordered separator>
               <q-item v-for="guardian in guardians" :key="guardian.id">
@@ -169,12 +164,13 @@
             No guardians linked. You can add guardians from the student detail page.
           </div>
 
-          <q-card-actions align="right" class="q-pt-md">
+          <div class="form-actions">
             <q-btn
               flat
               label="Cancel"
               @click="router.back()"
               :disable="saving"
+              class="q-mr-sm"
             />
             <q-btn
               color="primary"
@@ -183,10 +179,10 @@
               :loading="saving"
               icon="save"
             />
-          </q-card-actions>
+          </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -194,6 +190,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -327,10 +325,48 @@ async function updateStudent() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>

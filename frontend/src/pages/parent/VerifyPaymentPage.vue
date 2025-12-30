@@ -1,38 +1,25 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="$router.push('/app/parent/payments')"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">Verify Payment</div>
-          <div class="text-caption text-grey-7">Activate your subscription</div>
-        </div>
-      </div>
-    </div>
+  <q-page class="verify-payment-page">
+    <MobilePageHeader
+      title="Verify Payment"
+      subtitle="Activate your subscription"
+      :show-back="true"
+      @back="$router.push('/app/parent/payments')"
+    />
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <q-card class="form-card">
-        <q-card-section class="q-pa-md">
-          <div class="text-h6 q-mb-md">Payment Verification</div>
-          
-          <q-banner rounded class="bg-info text-white q-mb-md">
-            <template v-slot:avatar>
-              <q-icon name="info" color="white" />
-            </template>
-            <div class="text-body2">
-              Enter your verification token and payment reference to activate your subscription immediately.
-              The token was provided when you initiated the payment.
-            </div>
-          </q-banner>
+    <div class="form-content">
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Payment Verification</div>
+        
+        <q-banner rounded class="info-banner bg-info text-white q-mb-md">
+          <template v-slot:avatar>
+            <q-icon name="info" color="white" />
+          </template>
+          <div class="text-body2">
+            Enter your verification token and payment reference to activate your subscription immediately.
+            The token was provided when you initiated the payment.
+          </div>
+        </q-banner>
 
           <q-form @submit="verifyPayment" class="q-gutter-md">
             <q-input
@@ -83,13 +70,11 @@
               size="md"
             />
           </q-form>
-        </q-card-section>
-      </q-card>
+      </MobileCard>
 
       <!-- Instructions Card -->
-      <q-card class="info-card q-mt-md">
-        <q-card-section>
-          <div class="text-h6 q-mb-md">How to Verify Payment</div>
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">How to Verify Payment</div>
           <div class="q-gutter-y-sm">
             <div class="row items-start">
               <q-icon name="looks_one" color="primary" size="20px" class="q-mr-sm q-mt-xs" />
@@ -119,8 +104,7 @@
               </div>
             </div>
           </div>
-        </q-card-section>
-      </q-card>
+      </MobileCard>
     </div>
   </q-page>
 </template>
@@ -129,6 +113,8 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -183,41 +169,28 @@ async function verifyPayment() {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.verify-payment-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.parent-content {
+.form-content {
   max-width: 800px;
   margin: 0 auto;
 }
 
-.form-card,
-.info-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
 }
 
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
-
-  .parent-content {
-    padding: 12px;
-  }
+.info-banner {
+  margin-bottom: var(--spacing-md);
 }
 </style>
 

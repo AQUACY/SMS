@@ -86,11 +86,13 @@ const menuItems = computed(() => {
   left: 0;
   right: 0;
   z-index: 1000;
-  height: 70px;
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.85);
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  height: 72px;
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  background: rgba(255, 255, 255, 0.9);
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.08);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   @media (min-width: 768px) {
@@ -99,7 +101,7 @@ const menuItems = computed(() => {
 
   .nav-toolbar {
     height: 100%;
-    padding: 0;
+    padding: 0 var(--spacing-xs);
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -109,55 +111,64 @@ const menuItems = computed(() => {
   .nav-item {
     flex: 1;
     flex-direction: column;
-    padding: 8px 4px;
+    padding: var(--spacing-xs) var(--spacing-xs);
     min-width: 0;
-    color: rgba(0, 0, 0, 0.6);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-secondary);
+    transition: all var(--transition-base);
     position: relative;
-    border-radius: 12px;
-    margin: 0 2px;
+    border-radius: var(--radius-md);
+    margin: 0 var(--spacing-xs);
     max-width: 80px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
-    &:hover {
-      background: rgba(156, 39, 176, 0.08);
-      color: rgba(156, 39, 176, 0.9);
+    &:active {
+      transform: scale(0.95);
+      background: rgba(156, 39, 176, 0.1);
     }
 
     &.nav-item-active {
-      color: #9c27b0;
-      background: rgba(156, 39, 176, 0.12);
+      color: var(--primary-color);
+      background: rgba(156, 39, 176, 0.08);
 
       .nav-label {
-        font-weight: 600;
+        font-weight: 700;
+        color: var(--primary-color);
       }
 
-      &::before {
+      .q-icon {
+        color: var(--primary-color);
+        transform: scale(1.1);
+      }
+
+      &::after {
         content: '';
         position: absolute;
-        top: -2px;
+        top: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: 40%;
+        width: 32px;
         height: 3px;
-        background: linear-gradient(90deg, #9c27b0, #ba68c8);
-        border-radius: 0 0 3px 3px;
+        background: var(--primary-gradient);
+        border-radius: 0 0 var(--radius-sm) var(--radius-sm);
       }
     }
 
     .q-icon {
-      margin-bottom: 4px;
-      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    &:active .q-icon {
-      transform: scale(0.9);
+      margin-bottom: 2px;
+      transition: all var(--transition-base);
+      font-size: 24px;
     }
 
     .nav-label {
-      font-size: 11px;
+      font-size: 10px;
       line-height: 1.2;
       margin-top: 2px;
-      transition: all 0.3s ease;
+      transition: all var(--transition-base);
+      font-weight: 500;
+      letter-spacing: 0.2px;
     }
   }
 }

@@ -1,55 +1,148 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.push(`/app/classes/${classId}`)"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ classData?.name || 'Class Students' }}</div>
-        <div class="text-body2 text-grey-7">
-          {{ classData?.academic_year?.name || '' }} - {{ students.length }} students
+  <q-page class="class-students-page">
+    <!-- Mobile Header -->
+    <div class="mobile-only">
+      <MobilePageHeader
+        :title="classData?.name || 'Class Students'"
+        :subtitle="`${classData?.academic_year?.name || ''} - ${students.length} students`"
+        :show-back="true"
+        @back="router.push(`/app/classes/${classId}`)"
+      >
+        <template #actions>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="download"
+            color="secondary"
+            @click="exportToExcel"
+            :loading="exporting"
+            class="q-mr-xs"
+          >
+            <q-tooltip>Export Excel</q-tooltip>
+          </q-btn>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="upload"
+            color="secondary"
+            @click="showImportDialog = true"
+            class="q-mr-xs"
+          >
+            <q-tooltip>Import Excel</q-tooltip>
+          </q-btn>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="add"
+            color="primary"
+            @click="showAddDialog = true"
+          >
+            <q-tooltip>Add Student</q-tooltip>
+          </q-btn>
+        </template>
+      </MobilePageHeader>
+    </div>
+
+    <!-- Desktop Header -->
+    <div class="desktop-only q-pa-lg">
+      <div class="row items-center q-mb-lg">
+        <q-btn
+          flat
+          icon="arrow_back"
+          label="Back"
+          @click="router.push(`/app/classes/${classId}`)"
+          class="q-mr-md"
+        />
+        <div>
+          <div class="text-h5 text-weight-bold">{{ classData?.name || 'Class Students' }}</div>
+          <div class="text-body2 text-grey-7">
+            {{ classData?.academic_year?.name || '' }} - {{ students.length }} students
+          </div>
         </div>
-      </div>
-      <q-space />
-      <div>
-        <q-btn
-          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-          color="secondary"
-          label="Export Excel"
-          icon="download"
-          unelevated
-          @click="exportToExcel"
-          :loading="exporting"
-          class="q-mr-sm"
-        />
-        <q-btn
-          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-          color="secondary"
-          label="Import Excel"
-          icon="upload"
-          unelevated
-          @click="showImportDialog = true"
-          class="q-mr-sm"
-        />
-        <q-btn
-          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-          color="primary"
-          label="Add Student"
-          icon="add"
-          unelevated
-          @click="showAddDialog = true"
-        />
+        <q-space />
+        <div>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            color="secondary"
+            label="Export Excel"
+            icon="download"
+            unelevated
+            @click="exportToExcel"
+            :loading="exporting"
+            class="q-mr-sm"
+          />
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            color="secondary"
+            label="Import Excel"
+            icon="upload"
+            unelevated
+            @click="showImportDialog = true"
+            class="q-mr-sm"
+          />
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            color="primary"
+            label="Add Student"
+            icon="add"
+            unelevated
+            @click="showAddDialog = true"
+          />
+        </div>
       </div>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Students List</div>
-        <q-table
+    <div class="page-content">
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Students List</div>
+        
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="students.length === 0" class="empty-state">
+            <q-icon name="people" size="64px" color="grey-5" />
+            <div class="empty-text">No Students</div>
+            <div class="empty-subtext">No students enrolled in this class.</div>
+          </div>
+          <div v-else class="students-list">
+            <MobileListCard
+              v-for="student in students"
+              :key="student.id"
+              :title="getStudentName(student)"
+              :subtitle="student.student_number || 'N/A'"
+              :description="`${formatDate(student.date_of_birth)} | ${student.gender || 'N/A'}`"
+              icon="person"
+              :clickable="true"
+              @click="viewStudent(student.id)"
+            >
+              <template #extra>
+                <div class="card-actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="visibility"
+                    size="sm"
+                    color="primary"
+                    @click.stop="viewStudent(student.id)"
+                  />
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="students"
           :columns="columns"
           row-key="id"
@@ -87,9 +180,10 @@
               />
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
+    </div>
 
     <!-- Add Student Dialog -->
     <q-dialog v-model="showAddDialog" persistent>
@@ -128,6 +222,9 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import ExcelImportDialog from 'src/components/ExcelImportDialog.vue';
 import StudentForm from 'src/components/StudentForm.vue';
 import api from 'src/services/api';
@@ -278,6 +375,20 @@ const viewStudent = (id) => {
   router.push(`/app/students/${id}`);
 };
 
+const getStudentName = (student) => {
+  const parts = [student.first_name, student.middle_name, student.last_name].filter(Boolean);
+  return parts.join(' ') || 'Unknown';
+};
+
+const formatDate = (date) => {
+  if (!date) return 'N/A';
+  return new Date(date).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+};
+
 onMounted(() => {
   fetchClass();
   fetchStudents();
@@ -285,11 +396,76 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.class-students-page {
+  padding: 0;
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: 0;
+  }
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.students-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>
 

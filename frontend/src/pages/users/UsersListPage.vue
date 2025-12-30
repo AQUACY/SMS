@@ -1,81 +1,143 @@
 <template>
-  <q-page class="q-pa-lg">
-    <!-- Header -->
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">User Management</div>
-        <div class="text-body2 text-grey-7">Manage accounts managers and teachers</div>
-      </div>
-      <q-btn
-        color="primary"
-        icon="add"
-        label="Add User"
-        unelevated
-        @click="showCreateDialog = true"
-      />
-    </div>
+  <q-page class="users-list-page">
+    <MobilePageHeader
+      title="User Management"
+      subtitle="Manage accounts managers and teachers"
+    >
+      <template v-slot:actions>
+        <q-btn
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Add User' : ''"
+          icon="add"
+          unelevated
+          @click="showCreateDialog = true"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
     <!-- Filters -->
-    <q-card class="q-mb-md">
-      <q-card-section>
-        <div class="row q-gutter-md">
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.role"
-              :options="roleOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              label="Role"
-              outlined
-              clearable
-              dense
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.is_active"
-              :options="statusOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              label="Status"
-              outlined
-              clearable
-              dense
-            />
-          </div>
-          <div class="col-12 col-md-6">
-            <q-input
-              v-model="filters.search"
-              label="Search"
-              outlined
-              dense
-              clearable
-              placeholder="Name, email, phone..."
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filters.role"
+          :options="roleOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          label="Role"
+          outlined
+          clearable
+          dense
+          class="filter-item"
+        />
+        <q-select
+          v-model="filters.is_active"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          label="Status"
+          outlined
+          clearable
+          dense
+          class="filter-item"
+        />
+        <q-input
+          v-model="filters.search"
+          label="Search"
+          outlined
+          dense
+          clearable
+          placeholder="Name, email, phone..."
+          class="filter-item"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+    </MobileCard>
 
-    <!-- Users Table -->
-    <q-card>
-      <q-table
-        :rows="users"
-        :columns="columns"
-        :loading="loading"
-        :pagination="pagination"
-        @request="onRequest"
-        row-key="id"
-        flat
-      >
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="users.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="user in users"
+          :key="user.id"
+          :title="`${user.first_name} ${user.last_name}`"
+          :subtitle="user.email"
+          :description="getUserDescription(user)"
+          icon="person"
+          :badge="user.is_active ? 'Active' : 'Inactive'"
+          :badge-color="user.is_active ? 'positive' : 'negative'"
+          icon-bg="rgba(156, 39, 176, 0.1)"
+          @click="editUser(user)"
+        >
+          <template v-slot:extra>
+            <div class="user-roles">
+              <q-chip
+                v-for="role in user.roles"
+                :key="role.id"
+                :color="getRoleColor(role.name)"
+                :label="role.display_name || role.name"
+                size="sm"
+                class="q-mr-xs q-mb-xs"
+              />
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editUser(user)"
+                size="sm"
+              />
+              <q-btn
+                v-if="user.id !== currentUserId"
+                flat
+                dense
+                icon="delete"
+                color="negative"
+                label="Delete"
+                @click.stop="confirmDelete(user)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="person" size="64px" color="grey-5" />
+        <div class="empty-text">No users found</div>
+      </div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card>
+        <q-table
+          :rows="users"
+          :columns="columns"
+          :loading="loading"
+          :pagination="pagination"
+          @request="onRequest"
+          row-key="id"
+          flat
+        >
         <template v-slot:body-cell-roles="props">
           <q-td :props="props">
             <q-badge
@@ -124,7 +186,8 @@
           </q-td>
         </template>
       </q-table>
-    </q-card>
+      </q-card>
+    </div>
 
     <!-- Create/Edit User Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
@@ -241,6 +304,9 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const $q = useQuasar();
@@ -481,6 +547,18 @@ async function deleteUser(user) {
   }
 }
 
+function getUserDescription(user) {
+  const parts = [];
+  if (user.phone) {
+    parts.push(`Phone: ${user.phone}`);
+  }
+  if (user.roles && user.roles.length > 0) {
+    const roleNames = user.roles.map(r => r.display_name || r.name).join(', ');
+    parts.push(`Roles: ${roleNames}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
+
 // Watch filters and refetch
 watch([() => filters.value.role, () => filters.value.is_active, () => filters.value.search], () => {
   pagination.value.page = 1;
@@ -489,5 +567,97 @@ watch([() => filters.value.role, () => filters.value.is_active, () => filters.va
 </script>
 
 <style lang="scss" scoped>
+.users-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.user-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
 </style>
 

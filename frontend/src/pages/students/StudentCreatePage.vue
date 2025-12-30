@@ -1,33 +1,24 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.back()"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Add New Student</div>
-        <div class="text-body2 text-grey-7">Create a new student record</div>
-      </div>
-    </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Add New Student"
+      subtitle="Create a new student record"
+      :show-back="true"
+      @back="router.back()"
+    />
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-form @submit="saveStudent" class="q-gutter-md">
-          <div class="row q-col-gutter-md q-pa-md">
-            <!-- Left Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Basic Information</div>
-              
-              <q-banner rounded class="bg-info text-white q-mb-md">
-                <template v-slot:avatar>
-                  <q-icon name="info" />
-                </template>
-                Student number will be auto-generated based on your school code (e.g., B12-STU001)
-              </q-banner>
+    <div class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="saveStudent" class="form">
+          <div class="form-section">
+            <div class="section-title">Basic Information</div>
+            
+            <q-banner rounded class="info-banner bg-info text-white q-mb-md">
+              <template v-slot:avatar>
+                <q-icon name="info" />
+              </template>
+              Student number will be auto-generated based on your school code (e.g., B12-STU001)
+            </q-banner>
 
               <div class="row q-col-gutter-sm">
                 <q-input
@@ -83,11 +74,10 @@
                 label="Phone"
                 outlined
               />
-            </div>
+          </div>
 
-            <!-- Right Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Additional Information</div>
+          <div class="form-section">
+            <div class="section-title">Additional Information</div>
 
               <q-input
                 v-model="studentForm.address"
@@ -117,13 +107,13 @@
                 :false-value="false"
                 class="q-mb-md"
               />
-            </div>
           </div>
 
           <q-separator class="q-my-md" />
 
-          <div class="text-subtitle2 q-mb-sm">Parent Information (Optional)</div>
-          <div class="row q-col-gutter-md q-pa-md">
+          <div class="form-section">
+            <div class="section-title">Parent Information (Optional)</div>
+            <div class="form-grid">
             <q-input
               v-model="parentForm.email"
               label="Parent Email"
@@ -148,17 +138,17 @@
               v-model="parentForm.phone"
               label="Parent Phone"
               outlined
-              class="col-12 col-md-4"
             />
+            </div>
           </div>
 
-          <q-card-actions align="right" class="q-pt-md">
-            <q-btn flat label="Cancel" @click="router.back()" />
+          <div class="form-actions">
+            <q-btn flat label="Cancel" @click="router.back()" class="q-mr-sm" />
             <q-btn color="primary" label="Save Student" type="submit" :loading="saving" />
-          </q-card-actions>
+          </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -166,6 +156,8 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -256,10 +248,60 @@ async function saveStudent() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.info-banner {
+  margin-bottom: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 900px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>

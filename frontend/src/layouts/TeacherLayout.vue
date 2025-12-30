@@ -43,80 +43,165 @@
 
     <!-- Header -->
     <q-header elevated class="header-bar bg-white text-dark">
-      <q-toolbar class="q-px-md">
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-          class="q-mr-md"
-        />
-
-        <!-- Search Bar -->
-        <!-- <q-input
-          v-model="searchQuery"
-          placeholder="Search anything here"
-          dense
-          outlined
-          class="search-input"
-          :style="{ width: '400px' }"
-        >
-          <template v-slot:append>
-            <q-icon name="search" />
-          </template>
-        </q-input> -->
-
-        <q-space />
-
-        <!-- Right Side Actions -->
-        <div class="row items-center q-gutter-sm">
-          <q-btn flat round dense icon="notifications" color="grey-8">
-            <q-badge color="red" floating>3</q-badge>
-          </q-btn>
-
-          <!-- User Profile -->
-          <q-btn-dropdown
+      <!-- Mobile Header -->
+      <div class="mobile-header-wrapper">
+        <q-toolbar class="mobile-toolbar">
+          <q-btn
             flat
-            no-icon-animation
-            class="user-profile-btn"
-          >
-            <template v-slot:label>
-              <div class="row items-center q-gutter-sm">
-                <q-avatar size="32px" class="bg-primary">
-                  <q-icon name="person" color="white" />
+            dense
+            round
+            icon="menu"
+            aria-label="Menu"
+            @click="toggleLeftDrawer"
+            class="header-icon-btn"
+          />
+
+          <div class="header-greeting">
+            <div class="greeting-text">
+              Hello, {{ authStore.user?.first_name || 'Teacher' }}
+            </div>
+            <div class="greeting-subtitle">
+              Teacher
+            </div>
+          </div>
+
+          <q-space />
+
+          <div class="header-actions">
+            <!-- Notification Icon - Links to Notifications Page -->
+            <q-btn
+              flat
+              round
+              dense
+              icon="notifications"
+              color="grey-8"
+              class="header-icon-btn notification-btn"
+              :to="'/app/notifications'"
+            >
+              <q-badge
+                v-if="unreadNotificationCount > 0"
+                color="red"
+                floating
+                rounded
+              >
+                {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+              </q-badge>
+            </q-btn>
+
+            <!-- Profile Icon with Dropdown -->
+            <q-btn-dropdown
+              flat
+              round
+              dense
+              no-icon-animation
+              class="header-icon-btn profile-btn"
+            >
+              <template v-slot:label>
+                <q-avatar size="36px" class="bg-primary">
+                  <q-icon name="person" color="white" size="20px" />
                 </q-avatar>
-                <div class="text-left">
-                  <div class="text-weight-medium">{{ authStore.fullName || 'Teacher' }}</div>
-                  <div class="text-caption text-grey-7">Teacher</div>
+              </template>
+
+              <q-list>
+                <q-item clickable v-close-popup @click="goToProfile">
+                  <q-item-section avatar>
+                    <q-icon name="person" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Profile</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable v-close-popup @click="handleLogout">
+                  <q-item-section avatar>
+                    <q-icon name="logout" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Logout</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+          </div>
+        </q-toolbar>
+
+        <!-- Desktop Header (hidden on mobile) -->
+        <q-toolbar class="desktop-toolbar">
+          <q-btn
+            flat
+            dense
+            round
+            icon="menu"
+            aria-label="Menu"
+            @click="toggleLeftDrawer"
+            class="q-mr-md"
+          />
+
+          <q-space />
+
+          <!-- Right Side Actions -->
+          <div class="row items-center q-gutter-sm">
+            <!-- Notification Icon - Links to Notifications Page -->
+            <q-btn
+              flat
+              round
+              dense
+              icon="notifications"
+              color="grey-8"
+              :to="'/app/notifications'"
+            >
+              <q-badge
+                v-if="unreadNotificationCount > 0"
+                color="red"
+                floating
+                rounded
+              >
+                {{ unreadNotificationCount > 99 ? '99+' : unreadNotificationCount }}
+              </q-badge>
+            </q-btn>
+
+            <!-- User Profile -->
+            <q-btn-dropdown
+              flat
+              no-icon-animation
+              class="user-profile-btn"
+            >
+              <template v-slot:label>
+                <div class="row items-center q-gutter-sm">
+                  <q-avatar size="32px" class="bg-primary">
+                    <q-icon name="person" color="white" />
+                  </q-avatar>
+                  <div class="text-left">
+                    <div class="text-weight-medium">{{ authStore.fullName || 'Teacher' }}</div>
+                    <div class="text-caption text-grey-7">Teacher</div>
+                  </div>
+                  <q-icon name="keyboard_arrow_down" size="16px" />
                 </div>
-                <q-icon name="keyboard_arrow_down" size="16px" />
-              </div>
-            </template>
+              </template>
 
-            <q-list>
-              <q-item clickable v-close-popup @click="goToProfile">
-                <q-item-section avatar>
-                  <q-icon name="person" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Profile</q-item-label>
-                </q-item-section>
-              </q-item>
+              <q-list>
+                <q-item clickable v-close-popup @click="goToProfile">
+                  <q-item-section avatar>
+                    <q-icon name="person" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Profile</q-item-label>
+                  </q-item-section>
+                </q-item>
 
-              <q-item clickable v-close-popup @click="handleLogout">
-                <q-item-section avatar>
-                  <q-icon name="logout" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Logout</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-btn-dropdown>
-        </div>
-      </q-toolbar>
+                <q-item clickable v-close-popup @click="handleLogout">
+                  <q-item-section avatar>
+                    <q-icon name="logout" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Logout</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+          </div>
+        </q-toolbar>
+      </div>
     </q-header>
 
     <!-- Main Content -->
@@ -137,15 +222,17 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from 'src/stores/auth';
+import { useNotificationStore } from 'src/stores/notifications';
 import { useQuasar } from 'quasar';
 import MobileBottomNav from 'src/components/MobileBottomNav.vue';
 
 const $q = useQuasar();
 const router = useRouter();
 const authStore = useAuthStore();
+const notificationStore = useNotificationStore();
 
 const leftDrawerOpen = ref(false);
-const searchQuery = ref('');
+const unreadNotificationCount = computed(() => notificationStore.unreadCount || 0);
 
 const menuItems = computed(() => {
   if (!authStore.isTeacher) {
@@ -236,26 +323,87 @@ async function handleLogout() {
 
 .header-bar {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(20px);
-  background: rgba(255, 255, 255, 0.9) !important;
+  border-bottom: 1px solid var(--border-light);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  background: rgba(255, 255, 255, 0.95) !important;
+}
 
-  &.mobile-header {
-    .search-input {
-      display: none;
-    }
+.mobile-header-wrapper {
+  width: 100%;
+}
+
+.mobile-toolbar {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm) var(--spacing-md);
+  min-height: 64px;
+  
+  @media (min-width: 768px) {
+    display: none;
   }
 }
 
-.search-input {
-  :deep(.q-field__control) {
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.03);
-    transition: all 0.3s ease;
-    
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
+.desktop-toolbar {
+  display: none;
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    display: flex;
+  }
+}
+
+.header-greeting {
+  flex: 1;
+  margin-left: var(--spacing-sm);
+  
+  .greeting-text {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+  }
+  
+  .greeting-subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.header-icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.notification-btn {
+  position: relative;
+  
+  :deep(.q-badge) {
+    font-size: 10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+  }
+}
+
+.profile-btn {
+  :deep(.q-btn__content) {
+    padding: 0;
+  }
+  
+  .q-avatar {
+    border: 2px solid rgba(255, 255, 255, 0.3);
   }
 }
 

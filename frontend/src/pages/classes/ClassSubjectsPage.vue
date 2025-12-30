@@ -1,34 +1,81 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.push(`/app/classes/${classId}`)"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ classData?.name || 'Class Subjects' }}</div>
-        <div class="text-body2 text-grey-7">
-          {{ classData?.academic_year?.name || '' }} - {{ subjects.length }} subjects
-        </div>
-      </div>
-      <q-space />
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Add Subject"
-        icon="add"
-        unelevated
-        @click="showAddDialog = true"
-      />
-    </div>
+  <q-page class="class-subjects-page">
+    <MobilePageHeader
+      :title="classData?.name || 'Class Subjects'"
+      :subtitle="`${classData?.academic_year?.name || ''} - ${subjects.length} subjects`"
+      :show-back="true"
+      @back="router.push(`/app/classes/${classId}`)"
+    >
+      <template #actions>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          flat
+          round
+          dense
+          icon="add"
+          color="primary"
+          @click="showAddDialog = true"
+        >
+          <q-tooltip>Add Subject</q-tooltip>
+        </q-btn>
+      </template>
+    </MobilePageHeader>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Subjects List</div>
-        <q-list v-if="subjects.length > 0" separator>
+    <div class="page-content">
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Subjects List</div>
+        
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="subjects.length === 0" class="empty-state">
+            <q-icon name="book" size="64px" color="grey-5" />
+            <div class="empty-text">No Subjects</div>
+            <div class="empty-subtext">No subjects assigned to this class.</div>
+          </div>
+          <div v-else class="subjects-list">
+            <MobileListCard
+              v-for="subject in subjects"
+              :key="subject.id"
+              :title="subject.subject?.name || 'Unknown Subject'"
+              :subtitle="subject.teacher && subject.teacher.user ? `Teacher: ${getTeacherName(subject.teacher)}` : 'No teacher assigned'"
+              icon="book"
+              :clickable="true"
+              @click="viewSubject(subject.subject?.id)"
+            >
+              <template #extra>
+                <div class="card-actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="visibility"
+                    size="sm"
+                    color="primary"
+                    @click.stop="viewSubject(subject.subject?.id)"
+                    class="q-mr-xs"
+                  />
+                  <q-btn
+                    v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    size="sm"
+                    color="negative"
+                    @click.stop="removeSubject(subject.id)"
+                  />
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: List -->
+        <div class="desktop-only">
+          <q-list v-if="subjects.length > 0" separator>
           <q-item v-for="subject in subjects" :key="subject.id">
             <q-item-section avatar>
               <q-icon name="book" color="primary" size="md" />
@@ -61,12 +108,13 @@
               />
             </q-item-section>
           </q-item>
-        </q-list>
-        <div v-else class="text-body2 text-grey-7 text-center q-pa-lg">
-          No subjects assigned to this class
+          </q-list>
+          <div v-else class="text-body2 text-grey-7 text-center q-pa-lg">
+            No subjects assigned to this class
+          </div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
 
     <!-- Add Subject Dialog -->
     <q-dialog v-model="showAddDialog" persistent>
@@ -137,6 +185,9 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -314,11 +365,73 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.class-subjects-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.subjects-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>
 

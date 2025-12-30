@@ -1,23 +1,24 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="$router.push(`/app/academic-years/${academicYearId}`)"
-        class="q-mr-md"
-      />
-      <div class="text-h5 text-weight-bold">Edit Academic Year</div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Edit Academic Year"
+      subtitle="Update academic year information"
+      :show-back="true"
+      @back="$router.push(`/app/academic-years/${academicYearId}`)"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-if="loading" class="row justify-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
-
-    <q-card v-else class="widget-card q-pa-md">
-      <q-card-section>
-        <q-form @submit="onSubmit" class="q-gutter-md">
-          <div class="row q-col-gutter-md">
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="onSubmit" class="form">
+          <div class="form-grid">
             <div class="col-12">
               <q-input
                 v-model="form.name"
@@ -57,14 +58,14 @@
             </div>
           </div>
 
-          <q-banner v-if="academicYear?.is_active && !form.is_active" class="bg-warning text-white q-mt-md">
+          <q-banner v-if="academicYear?.is_active && !form.is_active" class="warning-banner bg-warning text-white q-mt-md">
             <template v-slot:avatar>
               <q-icon name="warning" />
             </template>
             Deactivating the active academic year may affect system operations.
           </q-banner>
 
-          <div class="row justify-end q-mt-lg">
+          <div class="form-actions">
             <q-btn
               flat
               label="Cancel"
@@ -79,8 +80,8 @@
             />
           </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -88,6 +89,8 @@
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -162,11 +165,52 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.warning-banner {
+  margin-top: var(--spacing-md);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>
 

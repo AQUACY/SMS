@@ -1,22 +1,23 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        round
-        icon="arrow_back"
-        @click="$router.push('/app/fees')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ isEdit ? 'Edit Fee' : 'Create Fee' }}</div>
-        <div class="text-body2 text-grey-7">{{ isEdit ? 'Update fee details' : 'Set fee for term' }}</div>
-      </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      :title="isEdit ? 'Edit Fee' : 'Create Fee'"
+      :subtitle="isEdit ? 'Update fee details' : 'Set fee for term'"
+      :show-back="true"
+      @back="$router.push('/app/fees')"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <q-card class="widget-card q-pr-lg">
-      <q-card-section>
-        <q-form @submit="submitForm" class="q-gutter-md">
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="submitForm" class="form">
           <div class="row q-gutter-md">
             <div class="col-12 col-md-6">
               <q-select
@@ -59,7 +60,7 @@
           </div>
 
           <!-- Class Selection (for class-specific fees) -->
-          <div v-if="form.fee_type === 'class'" class="row q-gutter-md">
+          <div v-if="form.fee_type === 'class'" class="form-grid">
             <div class="col-12">
               <q-select
                 v-model="form.class_id"
@@ -87,7 +88,7 @@
           </div>
 
           <!-- Level Selection (for level-specific fees) -->
-          <div v-if="form.fee_type === 'level'" class="row q-gutter-md">
+          <div v-if="form.fee_type === 'level'" class="form-grid">
             <div class="col-12">
               <q-select
                 v-model="form.level_category"
@@ -104,7 +105,7 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md">
+          <div class="form-grid">
             <div class="col-12">
               <q-input
                 v-model="form.name"
@@ -114,9 +115,6 @@
                 hint="e.g., Term 1 Subscription Fee"
               />
             </div>
-          </div>
-
-          <div class="row q-gutter-md">
             <div class="col-12">
               <q-input
                 v-model="form.description"
@@ -128,7 +126,7 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md">
+          <div class="form-grid">
             <div class="col-12 col-md-6">
               <q-input
                 v-model.number="form.amount"
@@ -154,17 +152,14 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md">
-            <div class="col-12 col-md-6">
-              <q-input
-                v-model="form.due_date"
-                label="Due Date"
-                outlined
-                type="date"
-              />
-            </div>
-
-            <div class="col-12 col-md-6">
+          <div class="form-grid">
+            <q-input
+              v-model="form.due_date"
+              label="Due Date"
+              outlined
+              type="date"
+            />
+            <div class="col-12">
               <q-toggle
                 v-model="form.is_active"
                 label="Active"
@@ -172,27 +167,24 @@
             </div>
           </div>
 
-          <div class="row q-mt-lg">
-            <div class="col-12">
-              <q-btn
-                type="submit"
-                color="primary"
-                label="Save Fee"
-                icon="save"
-                unelevated
-                :loading="submitting"
-              />
-              <q-btn
-                flat
-                label="Cancel"
-                @click="$router.push('/app/fees')"
-                class="q-ml-sm"
-              />
-            </div>
+          <div class="form-actions">
+            <q-btn
+              flat
+              label="Cancel"
+              @click="$router.push('/app/fees')"
+              class="q-mr-sm"
+            />
+            <q-btn
+              type="submit"
+              color="primary"
+              label="Save Fee"
+              icon="save"
+              :loading="submitting"
+            />
           </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -200,6 +192,8 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -376,11 +370,48 @@ async function submitForm() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>
 

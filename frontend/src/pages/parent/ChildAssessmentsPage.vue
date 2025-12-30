@@ -1,66 +1,51 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="router.back()"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">Assessments</div>
-          <div class="text-caption text-grey-7">{{ childName }}</div>
-        </div>
-      </div>
-    </div>
+  <q-page class="child-assessments-page">
+    <MobilePageHeader
+      title="Assessments"
+      :subtitle="childName"
+      :show-back="true"
+      @back="router.back()"
+    />
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
+    <div class="page-content">
       <!-- Term Selection -->
-      <q-card class="info-card q-mb-md" v-if="availableTerms.length > 0">
-        <q-card-section class="q-pa-md">
-          <div class="text-body1 text-weight-medium q-mb-sm">Select Term</div>
-          <q-select
-            v-model="selectedTermId"
-            :options="availableTerms"
-            option-label="label"
-            option-value="value"
-            emit-value
-            map-options
-            outlined
-            dense
-            @update:model-value="fetchAssessments"
-            class="q-mb-sm"
-          />
-          <div v-if="selectedTerm" class="text-caption text-grey-7">
-            {{ selectedTerm.academic_year?.name }} - {{ selectedTerm.name }}
-          </div>
-        </q-card-section>
-      </q-card>
+      <MobileCard v-if="availableTerms.length > 0" variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Select Term</div>
+        <q-select
+          v-model="selectedTermId"
+          :options="availableTerms"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          outlined
+          dense
+          @update:model-value="fetchAssessments"
+          class="q-mb-sm"
+        />
+        <div v-if="selectedTerm" class="text-caption text-grey-7">
+          {{ selectedTerm.academic_year?.name }} - {{ selectedTerm.name }}
+        </div>
+      </MobileCard>
 
       <!-- Skeleton Loading -->
-      <div v-if="loading" class="q-gutter-md">
-        <q-card class="info-card">
-          <q-card-section>
-            <q-skeleton type="rect" height="150px" class="q-mb-md" />
-            <q-skeleton type="text" width="60%" />
-            <q-skeleton type="text" width="40%" />
-          </q-card-section>
-        </q-card>
+      <div v-if="loading" class="detail-loading">
+        <MobileCard v-for="i in 2" :key="i" variant="default" padding="md" class="q-mb-md">
+          <q-skeleton type="rect" height="150px" class="q-mb-md" />
+          <q-skeleton type="text" width="60%" />
+          <q-skeleton type="text" width="40%" />
+        </MobileCard>
       </div>
 
       <!-- Assessments List -->
-      <div v-else-if="assessments.length > 0" class="q-gutter-md">
-        <q-card
+      <div v-else-if="assessments.length > 0" class="assessments-list">
+        <MobileCard
           v-for="assessment in assessments"
           :key="assessment.id"
-          class="info-card assessment-card q-mt-lg"
+          variant="default"
+          padding="md"
+          class="assessment-card q-mb-md"
         >
-          <q-card-section class="q-pa-md">
             <div class="row items-start q-mb-md">
               <q-icon :name="getTypeIcon(assessment.type)" size="32px" :color="getTypeColor(assessment.type)" class="q-mr-md" />
               <div class="col">
@@ -138,27 +123,26 @@
                 <div class="text-body2">Result not yet available</div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
+        </MobileCard>
       </div>
 
       <!-- Empty State -->
-      <q-card v-else-if="!loading && selectedTermId" class="info-card">
-        <q-card-section class="text-center q-pa-xl">
-          <q-icon name="quiz" size="64px" color="grey-5" class="q-mb-md" />
-          <div class="text-h6 text-grey-7 q-mb-sm">No Assessments Found</div>
-          <div class="text-body2 text-grey-6">
+      <MobileCard v-else-if="!loading && selectedTermId" variant="default" padding="lg">
+        <div class="empty-state">
+          <q-icon name="quiz" size="64px" color="grey-5" />
+          <div class="empty-text">No Assessments Found</div>
+          <div class="empty-subtext">
             No assessments available for this term yet.
           </div>
-        </q-card-section>
-      </q-card>
+        </div>
+      </MobileCard>
 
       <!-- Subscription Required -->
       <q-banner
         v-if="!loading && !selectedTermId && availableTerms.length === 0"
         dense
         rounded
-        class="bg-warning text-white q-ma-md"
+        class="subscription-banner bg-warning text-white q-ma-md"
       >
         <template v-slot:avatar>
           <q-icon name="lock" color="white" />
@@ -175,6 +159,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -431,57 +417,80 @@ function getGradeColor(grade) {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.child-assessments-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.parent-content {
+.page-content {
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.info-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.assessments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .assessment-card {
-  transition: all 0.2s ease;
+  transition: all var(--transition-base);
 
   &:active {
     transform: scale(0.98);
   }
 }
 
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
 .info-item {
-  padding: 8px 0;
+  padding: var(--spacing-xs) 0;
 }
 
 .result-section {
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
 }
 
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
 
-  .parent-content {
-    padding: 12px;
-  }
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
+}
+
+.subscription-banner {
+  margin: var(--spacing-md);
 }
 </style>
 

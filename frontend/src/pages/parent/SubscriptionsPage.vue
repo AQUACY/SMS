@@ -1,79 +1,152 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center justify-between">
-        <div class="col">
-          <div class="text-h6 text-weight-bold">My Subscriptions</div>
-          <div class="text-caption text-grey-7">Active and past subscriptions</div>
-        </div>
+  <q-page class="subscriptions-page">
+    <MobilePageHeader
+      title="My Subscriptions"
+      subtitle="Active and past subscriptions"
+    >
+      <template v-slot:actions>
         <q-btn
-          round
           color="primary"
+          :label="$q.screen.gt.xs ? 'Subscribe' : ''"
           icon="payment"
           unelevated
-          size="md"
           to="/app/parent/payments"
-          class="q-ml-sm"
-        >
-          <q-tooltip>Subscribe to Term</q-tooltip>
-        </q-btn>
-      </div>
-    </div>
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <!-- Skeleton Loading -->
-      <div v-if="loading" class="q-gutter-md">
-        <q-card class="subscription-card" v-for="n in 3" :key="n">
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filterStatus"
+          :options="statusOptions"
+          label="Filter by Status"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchSubscriptions"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterStudent"
+          :options="studentOptions"
+          option-label="full_name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Filter by Student"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchSubscriptions"
+          class="filter-item"
+        />
+      </div>
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
           <q-card-section>
-            <q-skeleton type="rect" height="60px" class="q-mb-md" />
-            <q-skeleton type="text" width="80%" />
-            <q-skeleton type="text" width="60%" />
-            <q-skeleton type="text" width="40%" class="q-mt-sm" />
+            <q-skeleton type="rect" height="120px" />
           </q-card-section>
         </q-card>
       </div>
-
-      <div v-else>
-        <!-- Filters (Mobile-friendly) -->
-        <div class="q-gutter-sm q-mb-md">
-          <q-select
-            v-model="filterStatus"
-            :options="statusOptions"
-            label="Filter by Status"
-            outlined
-            dense
-            clearable
-            @update:model-value="fetchSubscriptions"
-            class="col-12 col-sm-6"
-          />
-          <q-select
-            v-model="filterStudent"
-            :options="studentOptions"
-            option-label="full_name"
-            option-value="id"
-            emit-value
-            map-options
-            label="Filter by Student"
-            outlined
-            dense
-            clearable
-            @update:model-value="fetchSubscriptions"
-            class="col-12 col-sm-6"
-          />
-        </div>
-
-        <!-- Desktop Table -->
-        <q-table
-          v-if="$q.screen.gt.sm"
-          :rows="subscriptions"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          flat
-          class="subscriptions-table"
+      
+      <div v-else-if="subscriptions.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="subscription in subscriptions"
+          :key="subscription.id"
+          :title="subscription.student?.full_name || 'N/A'"
+          :subtitle="subscription.term?.name || 'N/A'"
+          :description="getSubscriptionDescription(subscription)"
+          icon="subscriptions"
+          :badge="subscription.status"
+          :badge-color="getStatusColor(subscription.status)"
+          icon-bg="rgba(76, 175, 80, 0.1)"
+          @click="viewSubscription(subscription)"
         >
+          <template v-slot:extra>
+            <div class="subscription-details">
+              <div class="detail-item">
+                <div class="detail-label">Amount</div>
+                <div class="detail-value">
+                  {{ formatCurrency(subscription.amount) }} {{ subscription.currency || 'GHS' }}
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Validity</div>
+                <div class="detail-value">
+                  {{ formatDate(subscription.starts_at) }} - {{ formatDate(subscription.expires_at) }}
+                </div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View Details"
+                @click.stop="viewSubscription(subscription)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="subscriptions" size="64px" color="grey-5" />
+        <div class="empty-text">No subscriptions found</div>
+        <div class="empty-subtext">Make a payment to subscribe to a term</div>
+      </div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-gutter-sm q-mb-md">
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="filterStatus"
+                :options="statusOptions"
+                label="Filter by Status"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchSubscriptions"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="filterStudent"
+                :options="studentOptions"
+                option-label="full_name"
+                option-value="id"
+                emit-value
+                map-options
+                label="Filter by Student"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchSubscriptions"
+              />
+            </div>
+          </div>
+
+          <q-table
+            :rows="subscriptions"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            flat
+            class="subscriptions-table"
+          >
           <template v-slot:body-cell-student="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.student?.full_name || 'N/A' }}</div>
@@ -131,71 +204,8 @@
             </q-td>
           </template>
         </q-table>
-
-        <!-- Mobile Card View -->
-        <div v-if="$q.screen.lt.md" class="q-gutter-md">
-          <q-card
-            v-for="subscription in subscriptions"
-            :key="subscription.id"
-            class="subscription-card"
-            @click="viewSubscription(subscription)"
-          >
-            <q-card-section class="q-pa-md">
-              <div class="row items-center justify-between q-mb-md">
-                <div>
-                  <div class="text-h6 text-weight-bold">{{ subscription.student?.full_name || 'N/A' }}</div>
-                  <div class="text-caption text-grey-7">{{ subscription.student?.student_number || '' }}</div>
-                </div>
-                <q-badge
-                  :color="getStatusColor(subscription.status)"
-                  :label="subscription.status"
-                  size="md"
-                />
-              </div>
-
-              <q-separator class="q-my-md" />
-
-              <div class="q-gutter-y-sm">
-                <div>
-                  <div class="text-caption text-grey-7">Term</div>
-                  <div class="text-body2">{{ subscription.term?.name || 'N/A' }}</div>
-                  <div class="text-caption text-grey-7">{{ subscription.term?.academic_year?.name || '' }}</div>
-                </div>
-                <div>
-                  <div class="text-caption text-grey-7">Amount</div>
-                  <div class="text-body1 text-weight-bold">
-                    {{ formatCurrency(subscription.amount) }} {{ subscription.currency || 'GHS' }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-caption text-grey-7">Validity Period</div>
-                  <div class="text-body2">Start: {{ formatDate(subscription.starts_at) }}</div>
-                  <div class="text-body2">Expires: {{ formatDate(subscription.expires_at) }}</div>
-                </div>
-              </div>
-            </q-card-section>
-            <q-card-actions class="q-pa-md q-pt-none">
-              <q-btn
-                flat
-                label="View Details"
-                color="primary"
-                icon="chevron_right"
-                icon-right="chevron_right"
-                class="full-width"
-                size="md"
-              />
-            </q-card-actions>
-          </q-card>
-        </div>
-
-        <div v-if="!loading && subscriptions.length === 0" class="empty-state text-center q-pa-lg">
-          <q-icon name="subscriptions" size="64px" color="grey-5" class="q-mb-md" />
-          <div class="text-h6 text-grey-7 q-mb-sm">No Subscriptions Found</div>
-          <div class="text-body2 text-grey-6">
-            You don't have any subscriptions yet. Make a payment to subscribe to a term.
-          </div>
-        </div>
-      </div>
+        </q-card-section>
+      </q-card>
     </div>
   </q-page>
 </template>
@@ -204,6 +214,9 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -312,9 +325,141 @@ function formatDate(date) {
     year: 'numeric',
   });
 }
+
+function getSubscriptionDescription(subscription) {
+  const parts = [];
+  if (subscription.term?.academic_year?.name) {
+    parts.push(`Year: ${subscription.term.academic_year.name}`);
+  }
+  if (subscription.student?.student_number) {
+    parts.push(`ID: ${subscription.student.student_number}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
+.subscriptions-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.subscription-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  
+  .detail-item {
+    .detail-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .detail-value {
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+  font-weight: 600;
+}
+
+.empty-subtext {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
+.widget-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(10px);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
+}
 .parent-page {
   background: #f5f5f5;
   min-height: 100vh;

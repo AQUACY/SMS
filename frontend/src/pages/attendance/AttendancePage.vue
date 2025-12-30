@@ -1,32 +1,68 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Attendance</div>
-        <div class="text-body2 text-grey-7">View and manage attendance records</div>
-      </div>
-      <div class="row q-gutter-sm">
-        <q-btn
-          v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
-          color="primary"
-          label="Mark Attendance"
-          icon="check_circle"
-          unelevated
-          to="/app/attendance/mark"
-        />
-        <q-btn
-          color="negative"
-          label="Generate PDF"
-          icon="picture_as_pdf"
-          unelevated
-          @click="showPdfDialog = true"
-        />
+  <q-page class="attendance-page">
+    <!-- Mobile Header -->
+    <div class="mobile-only">
+      <MobilePageHeader
+        title="Attendance"
+        subtitle="View and manage attendance records"
+      >
+        <template #actions>
+          <q-btn
+            v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="check_circle"
+            color="primary"
+            to="/app/attendance/mark"
+            class="q-mr-xs"
+          >
+            <q-tooltip>Mark Attendance</q-tooltip>
+          </q-btn>
+          <q-btn
+            flat
+            round
+            dense
+            icon="picture_as_pdf"
+            color="negative"
+            @click="showPdfDialog = true"
+          >
+            <q-tooltip>Generate PDF</q-tooltip>
+          </q-btn>
+        </template>
+      </MobilePageHeader>
+    </div>
+
+    <!-- Desktop Header -->
+    <div class="desktop-only q-pa-lg">
+      <div class="row items-center justify-between q-mb-lg">
+        <div>
+          <div class="text-h5 text-weight-bold">Attendance</div>
+          <div class="text-body2 text-grey-7">View and manage attendance records</div>
+        </div>
+        <div class="row q-gutter-sm">
+          <q-btn
+            v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            color="primary"
+            label="Mark Attendance"
+            icon="check_circle"
+            unelevated
+            to="/app/attendance/mark"
+          />
+          <q-btn
+            color="negative"
+            label="Generate PDF"
+            icon="picture_as_pdf"
+            unelevated
+            @click="showPdfDialog = true"
+          />
+        </div>
       </div>
     </div>
 
-    <!-- Filters -->
-    <q-card class="widget-card q-mb-md">
-      <q-card-section>
+    <div class="page-content">
+      <!-- Filters -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-3">
             <q-select
@@ -77,13 +113,63 @@
             />
           </div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <!-- Attendance Table -->
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-table
+      <!-- Attendance Table -->
+      <MobileCard variant="default" padding="md">
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="attendance.length === 0" class="empty-state">
+            <q-icon name="event_busy" size="64px" color="grey-5" />
+            <div class="empty-text">No Attendance Records</div>
+            <div class="empty-subtext">No attendance records found for the selected filters.</div>
+          </div>
+          <div v-else class="attendance-list">
+            <MobileListCard
+              v-for="record in attendance"
+              :key="record.id"
+              :title="getStudentName(record.student)"
+              :subtitle="formatDate(record.date)"
+              :description="`${record.class?.name || 'N/A'} - ${record.term?.name || 'N/A'}`"
+              icon="event"
+              :badge="formatStatus(record.status)"
+              :badge-color="getStatusColor(record.status)"
+              :clickable="true"
+              @click="viewDetails(record)"
+            >
+              <template #extra>
+                <div class="card-actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="visibility"
+                    size="sm"
+                    @click.stop="viewDetails(record)"
+                    class="q-mr-xs"
+                  />
+                  <q-btn
+                    v-if="canEditAttendance(record)"
+                    flat
+                    dense
+                    round
+                    icon="edit"
+                    size="sm"
+                    color="primary"
+                    @click.stop="editAttendance(record)"
+                  />
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="attendance"
           :columns="columns"
           :loading="loading"
@@ -139,9 +225,10 @@
               </q-btn>
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
+    </div>
 
     <!-- Edit Attendance Dialog -->
     <q-dialog v-model="showEditDialog" persistent>
@@ -299,6 +386,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -727,11 +817,69 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.attendance-page {
+  padding: 0;
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: 0;
+  }
+}
+
+.attendance-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 
 .attendance-table {

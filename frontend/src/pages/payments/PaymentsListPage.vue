@@ -1,109 +1,166 @@
 <template>
-  <q-page class="q-pa-lg">
-    <!-- Header -->
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Fee Payments</div>
-        <div class="text-body2 text-grey-7">Manage school fee payments</div>
-      </div>
-      <q-btn
-        color="primary"
-        icon="add"
-        label="Record Payment"
-        unelevated
-        @click="showCreateDialog = true"
-      />
-    </div>
+  <q-page class="payments-list-page">
+    <MobilePageHeader
+      title="Fee Payments"
+      subtitle="Manage school fee payments"
+    >
+      <template v-slot:actions>
+        <q-btn
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Record Payment' : ''"
+          icon="add"
+          unelevated
+          @click="showCreateDialog = true"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
     <!-- Filters -->
-    <q-card class="q-mb-md">
-      <q-card-section>
-        <div class="row q-gutter-md">
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.status"
-              :options="statusOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              label="Status"
-              outlined
-              clearable
-              dense
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.student_id"
-              :options="students"
-              option-label="full_name"
-              option-value="id"
-              emit-value
-              map-options
-              label="Student"
-              outlined
-              clearable
-              dense
-              :loading="loadingStudents"
-              use-input
-              input-debounce="300"
-              @filter="filterStudents"
-            >
-              <template v-slot:no-option>
-                <q-item>
-                  <q-item-section class="text-grey">
-                    No students found
-                  </q-item-section>
-                </q-item>
-              </template>
-            </q-select>
-          </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="filters.term_id"
-              :options="terms"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              label="Term"
-              outlined
-              clearable
-              dense
-              :loading="loadingTerms"
-            />
-          </div>
-          <div class="col-12 col-md-3">
-            <q-input
-              v-model="filters.search"
-              label="Search"
-              outlined
-              dense
-              clearable
-              placeholder="Reference, parent name..."
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filters.status"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          label="Status"
+          outlined
+          clearable
+          dense
+          class="filter-item"
+        />
+        <q-select
+          v-model="filters.student_id"
+          :options="students"
+          option-label="full_name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Student"
+          outlined
+          clearable
+          dense
+          :loading="loadingStudents"
+          use-input
+          input-debounce="300"
+          @filter="filterStudents"
+          class="filter-item"
+        >
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                No students found
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+        <q-select
+          v-model="filters.term_id"
+          :options="terms"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Term"
+          outlined
+          clearable
+          dense
+          :loading="loadingTerms"
+          class="filter-item"
+        />
+        <q-input
+          v-model="filters.search"
+          label="Search"
+          outlined
+          dense
+          clearable
+          placeholder="Reference, parent name..."
+          class="filter-item"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
+    </MobileCard>
 
-    <!-- Payments Table -->
-    <q-card>
-      <q-table
-        :rows="payments"
-        :columns="columns"
-        :loading="loading"
-        :pagination="pagination"
-        @request="onRequest"
-        row-key="id"
-        flat
-        class="payments-table"
-      >
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="payments.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="payment in payments"
+          :key="payment.id"
+          :title="payment.student?.full_name || 'N/A'"
+          :subtitle="`Ref: ${payment.reference || 'N/A'}`"
+          :description="getPaymentDescription(payment)"
+          icon="payment"
+          :badge="payment.status"
+          :badge-color="getStatusColor(payment.status)"
+          icon-bg="rgba(76, 175, 80, 0.1)"
+          @click="viewPayment(payment)"
+        >
+          <template v-slot:extra>
+            <div class="payment-amount">
+              <div class="amount-label">Amount</div>
+              <div class="amount-value">
+                {{ payment.currency || 'GHS' }} {{ parseFloat(payment.amount || 0).toFixed(2) }}
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewPayment(payment)"
+                size="sm"
+              />
+              <q-btn
+                v-if="payment.status === 'pending'"
+                flat
+                dense
+                icon="check_circle"
+                color="positive"
+                label="Verify"
+                @click.stop="verifyPayment(payment)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="payment" size="64px" color="grey-5" />
+        <div class="empty-text">No payments found</div>
+      </div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-table
+          :rows="payments"
+          :columns="columns"
+          :loading="loading"
+          :pagination="pagination"
+          @request="onRequest"
+          row-key="id"
+          flat
+          class="payments-table"
+        >
         <template v-slot:body-cell-status="props">
           <q-td :props="props">
             <q-badge
@@ -176,7 +233,8 @@
           </q-td>
         </template>
       </q-table>
-    </q-card>
+      </q-card>
+    </div>
 
     <!-- Create Payment Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
@@ -344,6 +402,9 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const $q = useQuasar();
@@ -575,6 +636,17 @@ function getStatusColor(status) {
   return colors[status] || 'grey';
 }
 
+function getPaymentDescription(payment) {
+  const parts = [];
+  if (payment.term?.name) parts.push(`Term: ${payment.term.name}`);
+  if (payment.parent?.user?.full_name) parts.push(`Parent: ${payment.parent.user.full_name}`);
+  if (payment.payment_method) {
+    const method = payment.payment_method.charAt(0).toUpperCase() + payment.payment_method.slice(1);
+    parts.push(`Method: ${method}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
+
 async function onStudentSelected() {
   paymentForm.value.parent_id = null;
   // Fetch student with parents
@@ -710,8 +782,122 @@ watch([() => filters.value.status, () => filters.value.student_id, () => filters
 </script>
 
 <style lang="scss" scoped>
+.payments-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.payment-amount {
+  margin-bottom: var(--spacing-sm);
+  
+  .amount-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+  }
+  
+  .amount-value {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
+.widget-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(10px);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
+}
+
 .payments-table {
-  .q-table__top {
+  :deep(.q-table__top) {
     padding: 0;
   }
 }

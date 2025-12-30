@@ -1,22 +1,23 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        round
-        icon="arrow_back"
-        @click="$router.push('/app/subscription-prices')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ isEdit ? 'Edit Subscription Price' : 'Create Subscription Price' }}</div>
-        <div class="text-body2 text-grey-7">{{ isEdit ? 'Update subscription price' : 'Set subscription pricing' }}</div>
-      </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      :title="isEdit ? 'Edit Subscription Price' : 'Create Subscription Price'"
+      :subtitle="isEdit ? 'Update subscription price' : 'Set subscription pricing'"
+      :show-back="true"
+      @back="$router.push('/app/subscription-prices')"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-form @submit="submitForm" class="q-gutter-md">
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="submitForm" class="form">
           <div class="row q-gutter-md">
             <div class="col-12 col-md-6">
               <q-select
@@ -62,7 +63,7 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md">
+          <div class="form-grid">
             <div class="col-12">
               <q-input
                 v-model="form.name"
@@ -72,9 +73,6 @@
                 hint="e.g., Standard Subscription, Premium Subscription"
               />
             </div>
-          </div>
-
-          <div class="row q-gutter-md">
             <div class="col-12">
               <q-input
                 v-model="form.description"
@@ -86,7 +84,7 @@
             </div>
           </div>
 
-          <div class="row q-gutter-md">
+          <div class="form-grid">
             <div class="col-12 col-md-6">
               <q-input
                 v-model.number="form.amount"
@@ -112,58 +110,50 @@
             </div>
           </div>
 
-          <!-- Payment Details Section -->
           <q-separator class="q-my-md" />
-          <div class="text-subtitle2 text-weight-medium q-mb-md">Payment Information</div>
-          <div class="text-body2 text-grey-7 q-mb-md">
-            Provide payment details so parents know where to send subscription payments
-          </div>
-
-          <div class="row q-gutter-md">
-            <div class="col-12 col-md-6">
-              <q-select
-                v-model="form.payment_network"
-                :options="networkOptions"
-                option-label="label"
-                option-value="value"
-                emit-value
-                map-options
-                label="Payment Network"
-                outlined
-                hint="Select the mobile money network"
-              >
-                <template v-slot:option="scope">
-                  <q-item v-bind="scope.itemProps">
-                    <q-item-section avatar>
-                      <q-icon :name="scope.opt.icon" :color="scope.opt.color" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ scope.opt.label }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </template>
-              </q-select>
+          <div class="form-section">
+            <div class="section-title">Payment Information</div>
+            <div class="section-description">
+              Provide payment details so parents know where to send subscription payments
             </div>
 
-            <div class="col-12 col-md-6">
-              <q-input
-                v-model="form.payment_number"
-                label="Payment Number"
-                outlined
-                hint="Mobile money number (e.g., 0244123456)"
-                mask="### ### ####"
-                :rules="[
-                  (val) => !form.payment_network || !!val || 'Payment number is required when network is selected',
-                ]"
-              >
-                <template v-slot:prepend>
-                  <q-icon name="phone" />
-                </template>
-              </q-input>
-            </div>
-          </div>
-
-          <div class="row q-gutter-md">
+          <div class="form-grid">
+            <q-select
+              v-model="form.payment_network"
+              :options="networkOptions"
+              option-label="label"
+              option-value="value"
+              emit-value
+              map-options
+              label="Payment Network"
+              outlined
+              hint="Select the mobile money network"
+            >
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-icon :name="scope.opt.icon" :color="scope.opt.color" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
+            <q-input
+              v-model="form.payment_number"
+              label="Payment Number"
+              outlined
+              hint="Mobile money number (e.g., 0244123456)"
+              mask="### ### ####"
+              :rules="[
+                (val) => !form.payment_network || !!val || 'Payment number is required when network is selected',
+              ]"
+            >
+              <template v-slot:prepend>
+                <q-icon name="phone" />
+              </template>
+            </q-input>
             <div class="col-12">
               <q-input
                 v-model="form.payment_name"
@@ -179,10 +169,7 @@
                 </template>
               </q-input>
             </div>
-          </div>
-
-          <div class="row q-gutter-md">
-            <div class="col-12 col-md-6">
+            <div class="col-12">
               <q-toggle
                 v-model="form.is_active"
                 label="Active"
@@ -190,27 +177,24 @@
             </div>
           </div>
 
-          <div class="row q-mt-lg">
-            <div class="col-12">
-              <q-btn
-                type="submit"
-                color="primary"
-                label="Save Price"
-                icon="save"
-                unelevated
-                :loading="submitting"
-              />
-              <q-btn
-                flat
-                label="Cancel"
-                @click="$router.push('/app/subscription-prices')"
-                class="q-ml-sm"
-              />
-            </div>
+          <div class="form-actions">
+            <q-btn
+              flat
+              label="Cancel"
+              @click="$router.push('/app/subscription-prices')"
+              class="q-mr-sm"
+            />
+            <q-btn
+              type="submit"
+              color="primary"
+              label="Save Price"
+              icon="save"
+              :loading="submitting"
+            />
           </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -218,6 +202,8 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -369,11 +355,65 @@ async function submitForm() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.section-description {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>
 

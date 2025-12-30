@@ -1,30 +1,25 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.back()"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ school?.name || 'School Details' }}</div>
-        <div class="text-body2 text-grey-7">View and manage school information</div>
-      </div>
+  <q-page class="school-detail-page">
+    <MobilePageHeader
+      :title="school?.name || 'School Details'"
+      subtitle="View and manage school information"
+      :show-back="true"
+      @back="router.back()"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard v-for="i in 2" :key="i" variant="default" padding="md" class="q-mb-md">
+        <q-skeleton type="rect" height="100px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-if="loading" class="text-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
-
-    <div v-else-if="school" class="row q-gutter-md">
-      <!-- School Information -->
-      <div class="col-12 col-md-8">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">School Information</div>
-            <q-list>
+    <div v-else-if="school" class="detail-content">
+      <!-- School Information Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">School Information</div>
+        <q-list>
               <q-item>
                 <q-item-section>
                   <q-item-label caption>School Name</q-item-label>
@@ -72,17 +67,13 @@
                   </q-item-label>
                 </q-item-section>
               </q-item>
-            </q-list>
-          </q-card-section>
-        </q-card>
-      </div>
+        </q-list>
+      </MobileCard>
 
-      <!-- Statistics -->
-      <div class="col-12 col-md-4">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Statistics</div>
-            <q-list>
+      <!-- Statistics Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Statistics</div>
+        <q-list>
               <q-item>
                 <q-item-section>
                   <q-item-label caption>Total Users</q-item-label>
@@ -115,40 +106,39 @@
                   </q-item-label>
                 </q-item-section>
               </q-item>
-            </q-list>
-          </q-card-section>
-        </q-card>
+        </q-list>
+      </MobileCard>
 
-        <q-card class="widget-card q-mt-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Actions</div>
-            <q-btn
-              color="secondary"
-              label="Sign In As Admin"
-              icon="login"
-              unelevated
-              class="full-width q-mb-sm"
-              @click="signInAsSchool"
-            />
-            <q-btn
-              color="primary"
-              label="Edit School"
-              icon="edit"
-              unelevated
-              class="full-width q-mb-sm"
-              @click="editSchool"
-            />
-            <q-btn
-              :color="school.is_active ? 'negative' : 'positive'"
-              :label="school.is_active ? 'Deactivate' : 'Activate'"
-              :icon="school.is_active ? 'block' : 'check_circle'"
-              unelevated
-              class="full-width"
-              @click="toggleStatus"
-            />
-          </q-card-section>
-        </q-card>
-      </div>
+      <!-- Actions Card -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Actions</div>
+        <div class="action-buttons">
+          <q-btn
+            color="secondary"
+            label="Sign In As Admin"
+            icon="login"
+            unelevated
+            class="full-width q-mb-sm"
+            @click="signInAsSchool"
+          />
+          <q-btn
+            color="primary"
+            label="Edit School"
+            icon="edit"
+            unelevated
+            class="full-width q-mb-sm"
+            @click="editSchool"
+          />
+          <q-btn
+            :color="school.is_active ? 'negative' : 'positive'"
+            :label="school.is_active ? 'Deactivate' : 'Activate'"
+            :icon="school.is_active ? 'block' : 'check_circle'"
+            unelevated
+            class="full-width"
+            @click="toggleStatus"
+          />
+        </div>
+      </MobileCard>
     </div>
   </q-page>
 </template>
@@ -158,6 +148,8 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -266,11 +258,45 @@ async function toggleStatus() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.school-detail-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
+  }
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
 }
 </style>
 

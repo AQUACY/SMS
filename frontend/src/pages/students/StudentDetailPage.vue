@@ -1,70 +1,50 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.push('/app/students')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Student Details</div>
-        <div class="text-body2 text-grey-7">View and manage student information</div>
-      </div>
-      <q-space />
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Edit Student"
-        icon="edit"
-        unelevated
-        @click="router.push(`/app/students/${studentId}/edit`)"
-      />
-    </div>
+  <q-page class="student-detail-page">
+    <MobilePageHeader
+      title="Student Details"
+      subtitle="View and manage student information"
+      :show-back="true"
+      @back="router.push('/app/students')"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Edit Student' : ''"
+          icon="edit"
+          unelevated
+          @click="router.push(`/app/students/${studentId}/edit`)"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
     <!-- Skeleton Loading -->
-    <div v-if="loading" class="row q-col-gutter-md">
-      <div class="col-12 col-md-8">
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <q-skeleton type="rect" height="100px" class="q-mb-md" />
-            <q-skeleton type="text" width="60%" />
-            <q-skeleton type="text" width="40%" />
-            <q-skeleton type="text" width="50%" class="q-mt-sm" />
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-4">
-        <q-card class="widget-card">
-          <q-card-section>
-            <q-skeleton type="text" width="40%" />
-            <q-skeleton type="rect" height="60px" class="q-mt-md" />
-            <q-skeleton type="rect" height="60px" class="q-mt-sm" />
-          </q-card-section>
-        </q-card>
-      </div>
+    <div v-if="loading" class="detail-loading">
+      <MobileCard v-for="i in 3" :key="i" variant="default" padding="md" class="q-mb-md">
+        <q-skeleton type="rect" height="100px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-else-if="student" class="row q-col-gutter-md">
-      <!-- Left Column - Student Information -->
-      <div class="col-12 col-md-8">
-        <!-- Basic Information Card -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <q-avatar size="80px" class="bg-primary q-mr-md">
-                <q-icon name="person" size="48px" color="white" />
-              </q-avatar>
-              <div>
-                <div class="text-h5 text-weight-bold q-mb-xs">{{ getStudentFullName(student) }}</div>
-                <div class="text-body2 text-grey-7 q-mb-xs">Student ID: {{ student.student_number }}</div>
-                <q-badge
-                  :color="student.is_active ? 'positive' : 'negative'"
-                  :label="student.is_active ? 'Active' : 'Inactive'"
-                />
-              </div>
-            </div>
+    <div v-else-if="student" class="detail-content">
+      <!-- Basic Information Card -->
+      <MobileCard variant="default" padding="lg" class="info-card q-mb-md">
+        <div class="student-header">
+          <q-avatar size="80px" class="student-avatar bg-primary">
+            <q-icon name="person" size="48px" color="white" />
+          </q-avatar>
+          <div class="student-info">
+            <div class="student-name">{{ getStudentFullName(student) }}</div>
+            <div class="student-id">Student ID: {{ student.student_number }}</div>
+            <q-badge
+              :color="student.is_active ? 'positive' : 'negative'"
+              :label="student.is_active ? 'Active' : 'Inactive'"
+              class="q-mt-xs"
+            />
+          </div>
+        </div>
 
             <q-separator class="q-my-md" />
 
@@ -142,13 +122,11 @@
                 </div>
               </template>
             </div>
-          </q-card-section>
-        </q-card>
+      </MobileCard>
 
-        <!-- Class Information Card -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Current Class</div>
+      <!-- Class Information Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Current Class</div>
             <div v-if="student.active_enrollment?.class" class="row items-center">
               <q-icon name="class" size="24px" color="primary" class="q-mr-sm" />
               <div>
@@ -158,14 +136,12 @@
                 </div>
               </div>
             </div>
-            <div v-else class="text-body2 text-grey-7">Not enrolled in any class</div>
-          </q-card-section>
-        </q-card>
+        <div v-else class="empty-text">Not enrolled in any class</div>
+      </MobileCard>
 
-        <!-- Academic History Card -->
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Academic History</div>
+      <!-- Academic History Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Academic History</div>
             <q-list v-if="enrollments.length > 0" separator>
               <q-item v-for="enrollment in enrollments" :key="enrollment.id">
                 <q-item-section avatar>
@@ -185,18 +161,13 @@
                 </q-item-section>
               </q-item>
             </q-list>
-            <div v-else class="text-body2 text-grey-7">No enrollment history</div>
-          </q-card-section>
-        </q-card>
-      </div>
+        <div v-else class="empty-text">No enrollment history</div>
+      </MobileCard>
 
-      <!-- Right Column - Guardians & Actions -->
-      <div class="col-12 col-md-4">
-        <!-- Guardians Card -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="row items-center justify-between q-mb-md">
-              <div class="text-h6">Guardians</div>
+      <!-- Guardians Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="row items-center justify-between q-mb-md">
+          <div class="card-title">Guardians</div>
               <q-btn
                 v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
                 flat
@@ -249,25 +220,23 @@
                 </q-item>
               </q-list>
             </div>
-            <div v-else class="text-body2 text-grey-7 text-center q-py-md">
-              No guardians linked
-              <q-btn
-                v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-                flat
-                dense
-                label="Link Guardian"
-                color="primary"
-                @click="showLinkGuardianDialog = true"
-                class="q-mt-sm full-width"
-              />
-            </div>
-          </q-card-section>
-        </q-card>
+        <div v-else class="empty-state-small">
+          <div class="empty-text">No guardians linked</div>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            dense
+            label="Link Guardian"
+            color="primary"
+            @click="showLinkGuardianDialog = true"
+            class="q-mt-sm"
+          />
+        </div>
+      </MobileCard>
 
-        <!-- Quick Actions Card -->
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Quick Actions</div>
+      <!-- Quick Actions Card -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Quick Actions</div>
             <q-list>
               <q-item clickable @click="router.push(`/app/students/${studentId}/attendance`)">
                 <q-item-section avatar>
@@ -303,9 +272,7 @@
                 </q-item-section>
               </q-item>
             </q-list>
-          </q-card-section>
-        </q-card>
-      </div>
+      </MobileCard>
     </div>
 
     <!-- Link Guardian Dialog -->
@@ -385,6 +352,8 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -683,11 +652,94 @@ function goToSubscribe() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.student-detail-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
+  }
+}
+
+.info-card {
+  @media (min-width: 768px) {
+    grid-column: 1;
+  }
+}
+
+.student-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.student-avatar {
+  flex-shrink: 0;
+}
+
+.student-info {
+  flex: 1;
+}
+
+.student-name {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.student-id {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.empty-state-small {
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
 }
 
 .blur-text {

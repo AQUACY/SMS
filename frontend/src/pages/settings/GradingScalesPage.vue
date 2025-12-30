@@ -1,23 +1,121 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Grading Scales</div>
-        <div class="text-body2 text-grey-7">Configure grading systems for your school</div>
-      </div>
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Add Grading Scale"
-        icon="add"
-        unelevated
-        @click="showCreateDialog = true"
-      />
+  <q-page class="grading-scales-page">
+    <!-- Mobile Header -->
+    <div class="mobile-only">
+      <MobilePageHeader
+        title="Grading Scales"
+        subtitle="Configure grading systems for your school"
+      >
+        <template #actions>
+          <q-btn
+            v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+            flat
+            round
+            dense
+            icon="add"
+            color="primary"
+            @click="showCreateDialog = true"
+          >
+            <q-tooltip>Add Grading Scale</q-tooltip>
+          </q-btn>
+        </template>
+      </MobilePageHeader>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-table
+    <!-- Desktop Header -->
+    <div class="desktop-only q-pa-lg">
+      <div class="row items-center justify-between q-mb-lg">
+        <div>
+          <div class="text-h5 text-weight-bold">Grading Scales</div>
+          <div class="text-body2 text-grey-7">Configure grading systems for your school</div>
+        </div>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          label="Add Grading Scale"
+          icon="add"
+          unelevated
+          @click="showCreateDialog = true"
+        />
+      </div>
+    </div>
+
+    <div class="page-content">
+      <MobileCard variant="default" padding="md">
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="gradingScales.length === 0" class="empty-state">
+            <q-icon name="grade" size="64px" color="grey-5" />
+            <div class="empty-text">No Grading Scales</div>
+            <div class="empty-subtext">No grading scales configured yet.</div>
+          </div>
+          <div v-else class="scales-list">
+            <MobileListCard
+              v-for="scale in gradingScales"
+              :key="scale.id"
+              :title="scale.name"
+              :subtitle="scale.description || ''"
+              :description="`${scale.grade_levels?.length || 0} grades | ${getGradeRange(scale)}`"
+              icon="grade"
+              :badge="scale.is_default ? 'Default' : scale.is_active ? 'Active' : 'Inactive'"
+              :badge-color="scale.is_default ? 'primary' : scale.is_active ? 'positive' : 'grey'"
+              :clickable="true"
+              @click="viewGradingScale(scale)"
+            >
+              <template #extra>
+                <div class="card-actions">
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="visibility"
+                    size="sm"
+                    @click.stop="viewGradingScale(scale)"
+                    class="q-mr-xs"
+                  />
+                  <q-btn
+                    flat
+                    dense
+                    round
+                    icon="edit"
+                    size="sm"
+                    color="primary"
+                    @click.stop="editGradingScale(scale)"
+                    class="q-mr-xs"
+                  />
+                  <q-btn
+                    v-if="!scale.is_default"
+                    flat
+                    dense
+                    round
+                    icon="star"
+                    size="sm"
+                    color="warning"
+                    @click.stop="setAsDefault(scale)"
+                    class="q-mr-xs"
+                  />
+                  <q-btn
+                    v-if="!scale.is_default"
+                    flat
+                    dense
+                    round
+                    icon="delete"
+                    size="sm"
+                    color="negative"
+                    @click.stop="deleteGradingScale(scale)"
+                  />
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="gradingScales"
           :columns="columns"
           row-key="id"
@@ -90,9 +188,10 @@
               />
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
+    </div>
 
     <!-- Create/Edit Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
@@ -297,6 +396,9 @@
 import { ref, onMounted } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const $q = useQuasar();
@@ -555,11 +657,69 @@ function getGradeRange(scale) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.grading-scales-page {
+  padding: 0;
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: 0;
+  }
+}
+
+.scales-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>
 

@@ -1,21 +1,15 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="$router.push('/app/notifications')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Send Notification</div>
-        <div class="text-body2 text-grey-7">Send notifications to users</div>
-      </div>
-    </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Send Notification"
+      subtitle="Send notifications to users"
+      :show-back="true"
+      @back="$router.push('/app/notifications')"
+    />
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-form @submit="sendNotification" class="q-gutter-md">
+    <div class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="sendNotification" class="form">
           <q-select
             v-model="form.recipient_type"
             :options="recipientTypeOptions"
@@ -131,25 +125,24 @@
             label="Send Email Notification"
           />
 
-          <div class="row q-mt-lg q-gutter-sm">
-            <q-space />
+          <div class="form-actions">
             <q-btn
               flat
               label="Cancel"
               color="grey-7"
               @click="$router.push('/app/notifications')"
+              class="q-mr-sm"
             />
             <q-btn
               type="submit"
               color="primary"
               label="Send Notification"
-              unelevated
               :loading="sending"
             />
           </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -158,6 +151,8 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import { notificationService } from 'src/services/notifications';
 
 const router = useRouter();
@@ -303,11 +298,32 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>
 

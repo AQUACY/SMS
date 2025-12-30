@@ -1,21 +1,15 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="router.push('/app/results')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Enter Results</div>
-        <div class="text-body2 text-grey-7">Enter marks for students in an assessment</div>
-      </div>
-    </div>
+  <q-page class="enter-results-page">
+    <MobilePageHeader
+      title="Enter Results"
+      subtitle="Enter marks for students in an assessment"
+      :show-back="true"
+      @back="router.push('/app/results')"
+    />
 
-    <!-- Assessment Selection -->
-    <q-card class="widget-card q-mb-md">
-      <q-card-section>
+    <div class="page-content">
+      <!-- Assessment Selection -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
         <div class="text-h6 q-mb-md">Select Assessment</div>
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-6">
@@ -56,12 +50,10 @@
             </div>
           </div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <!-- Results Entry Form -->
-    <q-card v-if="students.length > 0 && selectedAssessment" class="widget-card">
-      <q-card-section>
+      <!-- Results Entry Form -->
+      <MobileCard v-if="students.length > 0 && selectedAssessment" variant="default" padding="md">
         <div class="row items-center justify-between q-mb-md">
           <div class="text-h6">Enter Marks for Students</div>
           <div>
@@ -147,30 +139,25 @@
             </q-td>
           </template>
         </q-table>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <!-- Empty State -->
-    <q-card v-else-if="selectedAssessmentId && !loadingStudents" class="widget-card">
-      <q-card-section>
-        <div class="text-center q-pa-lg">
+      <!-- Empty State -->
+      <MobileCard v-else-if="selectedAssessmentId && !loadingStudents" variant="default" padding="lg">
+        <div class="empty-state">
           <q-icon name="info" size="48px" color="grey-6" />
-          <div class="text-body1 text-grey-7 q-mt-md">
-            No students found for this assessment's class
-          </div>
+          <div class="empty-text">No students found</div>
+          <div class="empty-subtext">No students found for this assessment's class</div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <!-- Loading State -->
-    <q-card v-if="loadingStudents" class="widget-card">
-      <q-card-section>
-        <div class="text-center q-pa-lg">
+      <!-- Loading State -->
+      <MobileCard v-if="loadingStudents" variant="default" padding="lg">
+        <div class="loading-state">
           <q-spinner color="primary" size="3em" />
-          <div class="text-body2 text-grey-7 q-mt-md">Loading students...</div>
+          <div class="loading-text">Loading students...</div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -178,6 +165,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -589,10 +578,53 @@ function formatDate(date) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.enter-results-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.loading-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
 }
 </style>

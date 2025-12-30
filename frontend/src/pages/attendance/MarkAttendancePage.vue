@@ -1,21 +1,14 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.push('/app/attendance')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Mark Attendance</div>
-        <div class="text-body2 text-grey-7">Mark attendance for a class on a specific date</div>
-      </div>
-    </div>
+  <q-page class="mark-attendance-page">
+    <MobilePageHeader
+      title="Mark Attendance"
+      subtitle="Mark attendance for a class on a specific date"
+      :show-back="true"
+      @back="router.push('/app/attendance')"
+    />
 
-    <q-card class="widget-card q-mb-md">
-      <q-card-section>
+    <div class="page-content">
+      <MobileCard variant="default" padding="md" class="q-mb-md">
         <div class="row q-col-gutter-md">
           <div class="col-12 col-md-4">
             <q-select
@@ -53,12 +46,10 @@
             />
           </div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <q-card v-if="students.length > 0" class="widget-card">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Mark Attendance for Students</div>
+      <MobileCard v-if="students.length > 0" variant="default" padding="md">
+        <div class="card-title">Mark Attendance for Students</div>
         <div class="row q-col-gutter-sm q-mb-md">
           <q-btn
             color="positive"
@@ -141,18 +132,16 @@
             @click="submitAttendance"
           />
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
 
-    <q-card v-else-if="form.class_id && form.term_id && form.date && !loadingStudents" class="widget-card">
-      <q-card-section>
-        <div class="text-center q-pa-lg">
+      <MobileCard v-else-if="form.class_id && form.term_id && form.date && !loadingStudents" variant="default" padding="lg">
+        <div class="empty-state">
           <q-icon name="info" size="48px" color="grey-6" />
-          <div class="text-h6 q-mt-md">No students found</div>
-          <div class="text-body2 text-grey-7">This class has no enrolled students for the selected term.</div>
+          <div class="empty-text">No students found</div>
+          <div class="empty-subtext">This class has no enrolled students for the selected term.</div>
         </div>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -160,6 +149,8 @@
 import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -372,11 +363,24 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.mark-attendance-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
 }
 
 .attendance-toggle {
@@ -387,5 +391,27 @@ export default {
       margin-right: 0;
     }
   }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>

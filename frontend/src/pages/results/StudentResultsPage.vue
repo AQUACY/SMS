@@ -1,97 +1,148 @@
 <template>
-  <q-page class="q-pa-lg" v-if="student">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="router.push('/app/results')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">{{ getStudentName(student) }}</div>
-        <div class="text-body2 text-grey-7">
-          Student Number: {{ student.student_number || 'N/A' }}
+  <q-page class="student-results-page" v-if="student">
+    <MobilePageHeader
+      :title="getStudentName(student)"
+      :subtitle="`Student Number: ${student.student_number || 'N/A'}`"
+      :show-back="true"
+      @back="router.push('/app/results')"
+    >
+      <template #actions>
+        <q-select
+          v-model="selectedTermId"
+          :options="terms"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Term"
+          @update:model-value="fetchResults"
+          :loading="loadingTerms"
+          style="min-width: 150px;"
+          class="mobile-only"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <div class="desktop-only q-pa-lg">
+      <div class="row items-center q-mb-lg">
+        <q-btn
+          flat
+          icon="arrow_back"
+          @click="router.push('/app/results')"
+          class="q-mr-md"
+        />
+        <div>
+          <div class="text-h5 text-weight-bold">{{ getStudentName(student) }}</div>
+          <div class="text-body2 text-grey-7">
+            Student Number: {{ student.student_number || 'N/A' }}
+          </div>
         </div>
-      </div>
-      <q-space />
-      <q-select
-        v-model="selectedTermId"
-        :options="terms"
-        option-label="name"
-        option-value="id"
-        emit-value
-        map-options
-        outlined
-        dense
-        clearable
-        label="Filter by Term"
-        @update:model-value="fetchResults"
-        :loading="loadingTerms"
-        style="min-width: 200px;"
-      />
-    </div>
-
-    <!-- Statistics Card -->
-    <div class="row q-col-gutter-md q-mb-md" v-if="statistics">
-      <div class="col-12 col-md-3">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-caption text-grey-7">Total Assessments</div>
-            <div class="text-h6">{{ statistics.total_assessments || 0 }}</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-3">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-caption text-grey-7">Average Percentage</div>
-            <div class="text-h6">{{ statistics.average_percentage || 0 }}%</div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-3">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-caption text-grey-7">Overall Grade</div>
-            <div class="text-h6">
-              <q-badge
-                v-if="statistics.overall_grade"
-                :color="getGradeColor(statistics.overall_grade)"
-                :label="statistics.overall_grade"
-                style="font-size: 1.2em; padding: 8px 16px;"
-              />
-              <span v-else class="text-grey-7">-</span>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div class="col-12 col-md-3">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-caption text-grey-7">Total Marks</div>
-            <div class="text-h6">
-              {{ statistics.total_obtained || 0 }} / {{ statistics.total_marks || 0 }}
-            </div>
-          </q-card-section>
-        </q-card>
+        <q-space />
+        <q-select
+          v-model="selectedTermId"
+          :options="terms"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Term"
+          @update:model-value="fetchResults"
+          :loading="loadingTerms"
+          style="min-width: 200px;"
+        />
       </div>
     </div>
 
-    <!-- Results by Subject -->
-    <q-card class="widget-card q-mb-md" v-if="resultsBySubject.length > 0">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">Results by Subject</div>
-        <q-list separator>
-          <q-expansion-item
-            v-for="(subjectGroup, index) in resultsBySubject"
-            :key="index"
-            :label="subjectGroup.subject"
-            :caption="`${subjectGroup.results.length} assessment(s)`"
-            header-class="text-primary"
-          >
-            <q-card>
-              <q-card-section>
-                <q-table
+    <div class="page-content">
+      <!-- Statistics Card -->
+      <div class="stats-grid q-mb-md" v-if="statistics">
+        <MobileCard variant="default" padding="md">
+          <div class="stat-label">Total Assessments</div>
+          <div class="stat-value">{{ statistics.total_assessments || 0 }}</div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md">
+          <div class="stat-label">Average Percentage</div>
+          <div class="stat-value">{{ statistics.average_percentage || 0 }}%</div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md">
+          <div class="stat-label">Overall Grade</div>
+          <div class="stat-value">
+            <q-badge
+              v-if="statistics.overall_grade"
+              :color="getGradeColor(statistics.overall_grade)"
+              :label="statistics.overall_grade"
+              style="font-size: 1.2em; padding: 8px 16px;"
+            />
+            <span v-else class="text-grey-7">-</span>
+          </div>
+        </MobileCard>
+        <MobileCard variant="default" padding="md">
+          <div class="stat-label">Total Marks</div>
+          <div class="stat-value">
+            {{ statistics.total_obtained || 0 }} / {{ statistics.total_marks || 0 }}
+          </div>
+        </MobileCard>
+      </div>
+
+      <!-- Results by Subject -->
+      <MobileCard variant="default" padding="md" class="q-mb-md" v-if="resultsBySubject.length > 0">
+        <div class="card-title">Results by Subject</div>
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <q-list separator>
+            <q-expansion-item
+              v-for="(subjectGroup, index) in resultsBySubject"
+              :key="index"
+              :label="subjectGroup.subject"
+              :caption="`${subjectGroup.results.length} assessment(s)`"
+              header-class="text-primary"
+            >
+              <div class="subject-results-list">
+                <MobileListCard
+                  v-for="result in subjectGroup.results"
+                  :key="result.id"
+                  :title="result.assessment?.name || 'N/A'"
+                  :subtitle="`${formatType(result.assessment?.type)} | Weight: ${result.assessment?.weight || 0}%`"
+                  :description="`Term: ${result.assessment?.term?.name || 'N/A'} | Date: ${formatDate(result.assessment?.assessment_date)}`"
+                  icon="assignment"
+                  :badge="result.grade || '-'"
+                  :badge-color="result.grade ? getGradeColor(result.grade) : 'grey'"
+                >
+                  <template #extra>
+                    <div class="result-marks">
+                      <div class="marks-display">
+                        {{ result.marks_obtained || '-' }} / {{ result.assessment?.total_marks || '-' }}
+                      </div>
+                      <div v-if="result.marks_obtained && result.assessment?.total_marks" class="percentage">
+                        {{ calculatePercentage(result.marks_obtained, result.assessment.total_marks) }}%
+                      </div>
+                    </div>
+                  </template>
+                </MobileListCard>
+              </div>
+            </q-expansion-item>
+          </q-list>
+        </div>
+
+        <!-- Desktop View: Expansion Items with Tables -->
+        <div class="desktop-only">
+          <q-list separator>
+            <q-expansion-item
+              v-for="(subjectGroup, index) in resultsBySubject"
+              :key="index"
+              :label="subjectGroup.subject"
+              :caption="`${subjectGroup.results.length} assessment(s)`"
+              header-class="text-primary"
+            >
+              <q-card>
+                <q-card-section>
+                  <q-table
                   :rows="subjectGroup.results"
                   :columns="columns"
                   row-key="id"
@@ -138,19 +189,53 @@
                       </div>
                     </q-td>
                   </template>
-                </q-table>
-              </q-card-section>
-            </q-card>
-          </q-expansion-item>
-        </q-list>
-      </q-card-section>
-    </q-card>
+                  </q-table>
+                </q-card-section>
+              </q-card>
+            </q-expansion-item>
+          </q-list>
+        </div>
+      </MobileCard>
 
-    <!-- All Results Table -->
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="text-h6 q-mb-md">All Results</div>
-        <q-table
+      <!-- All Results Table -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">All Results</div>
+        
+        <!-- Mobile View: Card List -->
+        <div class="mobile-only">
+          <div v-if="results.length === 0" class="empty-state">
+            <q-icon name="assignment" size="64px" color="grey-5" />
+            <div class="empty-text">No Results</div>
+            <div class="empty-subtext">No results found for this student.</div>
+          </div>
+          <div v-else class="results-list">
+            <MobileListCard
+              v-for="result in results"
+              :key="result.id"
+              :title="result.assessment?.name || 'N/A'"
+              :subtitle="result.assessment?.class_subject?.subject?.name || 'N/A'"
+              :description="`${result.assessment?.class_subject?.class?.name || ''} | Term: ${result.assessment?.term?.name || 'N/A'}`"
+              icon="assignment"
+              :badge="result.grade || '-'"
+              :badge-color="result.grade ? getGradeColor(result.grade) : 'grey'"
+            >
+              <template #extra>
+                <div class="result-marks">
+                  <div class="marks-display">
+                    {{ result.marks_obtained || '-' }} / {{ result.assessment?.total_marks || '-' }}
+                  </div>
+                  <div v-if="result.marks_obtained && result.assessment?.total_marks" class="percentage">
+                    {{ calculatePercentage(result.marks_obtained, result.assessment.total_marks) }}%
+                  </div>
+                </div>
+              </template>
+            </MobileListCard>
+          </div>
+        </div>
+
+        <!-- Desktop View: Table -->
+        <div class="desktop-only">
+          <q-table
           :rows="results"
           :columns="columns"
           row-key="id"
@@ -197,13 +282,16 @@
               </div>
             </q-td>
           </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
+          </q-table>
+        </div>
+      </MobileCard>
+    </div>
   </q-page>
 
-  <q-page v-else class="q-pa-lg flex flex-center">
-    <q-spinner color="primary" size="3em" />
+  <q-page v-else class="detail-loading">
+    <div class="loading-center">
+      <q-spinner color="primary" size="3em" />
+    </div>
   </q-page>
 </template>
 
@@ -211,6 +299,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -399,10 +490,125 @@ function formatType(type) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.student-results-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+}
+
+.loading-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-only {
+  display: block;
+  
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+.desktop-only {
+  display: none;
+  
+  @media (min-width: 768px) {
+    display: block;
+  }
+}
+
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.subject-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+}
+
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.result-marks {
+  text-align: right;
+}
+
+.marks-display {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.percentage {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
 }
 </style>

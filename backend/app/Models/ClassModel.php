@@ -82,6 +82,14 @@ class ClassModel extends Model
     }
 
     /**
+     * Get all class subjects (ClassSubject model instances)
+     */
+    public function classSubjects()
+    {
+        return $this->hasMany(ClassSubject::class, 'class_id');
+    }
+
+    /**
      * Get all fees for this class
      */
     public function fees()

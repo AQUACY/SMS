@@ -1,65 +1,159 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Terms</div>
-        <div class="text-body2 text-grey-7">Manage academic terms</div>
+  <q-page class="terms-list-page">
+    <MobilePageHeader
+      title="Terms"
+      subtitle="Manage academic terms"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Add Term' : ''"
+          icon="add"
+          unelevated
+          to="/app/terms/create"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filterAcademicYear"
+          :options="academicYears"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Academic Year"
+          @update:model-value="onFilter"
+          :loading="loadingAcademicYears"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterStatus"
+          :options="statusOptions"
+          option-label="label"
+          option-value="value"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Status"
+          @update:model-value="onFilter"
+          class="filter-item"
+        />
       </div>
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Add Term"
-        icon="add"
-        unelevated
-        to="/app/terms/create"
-      />
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="80px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="terms.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="term in terms"
+          :key="term.id"
+          :title="term.name"
+          :subtitle="term.academic_year?.name || 'N/A'"
+          :description="getTermDescription(term)"
+          icon="event"
+          :badge="formatStatus(term.status)"
+          :badge-color="getStatusColor(term.status)"
+          icon-bg="rgba(156, 39, 176, 0.1)"
+          @click="viewTerm(term.id)"
+        >
+          <template v-slot:extra>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewTerm(term.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin && canEdit(term)"
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editTerm(term.id)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="event" size="64px" color="grey-5" />
+        <div class="empty-text">No terms found</div>
+      </div>
     </div>
 
-    <q-card class="widget-card q-pa-md">
-      <q-card-section>
-        <div class="row q-mb-md">
-          <div class="col-12 col-md-6">
-            <q-select
-              v-model="filterAcademicYear"
-              :options="academicYears"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Academic Year"
-              @update:model-value="onFilter"
-              :loading="loadingAcademicYears"
-            />
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card q-pa-md">
+        <q-card-section>
+          <div class="row q-mb-md">
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="filterAcademicYear"
+                :options="academicYears"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Academic Year"
+                @update:model-value="onFilter"
+                :loading="loadingAcademicYears"
+              />
+            </div>
+            <div class="col-12 col-md-6">
+              <q-select
+                v-model="filterStatus"
+                :options="statusOptions"
+                option-label="label"
+                option-value="value"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Status"
+                @update:model-value="onFilter"
+              />
+            </div>
           </div>
-          <div class="col-12 col-md-6">
-            <q-select
-              v-model="filterStatus"
-              :options="statusOptions"
-              option-label="label"
-              option-value="value"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Status"
-              @update:model-value="onFilter"
-            />
-          </div>
-        </div>
 
-        <q-table
-          :rows="terms"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="terms"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-status="props">
             <q-td :props="props">
               <q-badge
@@ -99,7 +193,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -108,6 +203,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -200,6 +298,17 @@ const canEdit = (term) => {
   return !['closed', 'archived'].includes(term.status);
 };
 
+function getTermDescription(term) {
+  const parts = [];
+  if (term.start_date && term.end_date) {
+    parts.push(`${formatDate(term.start_date)} - ${formatDate(term.end_date)}`);
+  }
+  if (term.academic_year?.name) {
+    parts.push(`Year: ${term.academic_year.name}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
+
 const fetchAcademicYears = async () => {
   loadingAcademicYears.value = true;
   try {
@@ -282,10 +391,97 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+.terms-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>

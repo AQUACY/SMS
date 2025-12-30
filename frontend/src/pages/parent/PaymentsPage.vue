@@ -1,92 +1,157 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center justify-between">
-        <div class="col">
-          <div class="text-h6 text-weight-bold">My Payments</div>
-          <div class="text-caption text-grey-7">Payment history</div>
-        </div>
-        <div class="row q-gutter-sm">
-          <q-btn
-            round
-            color="primary"
-            icon="verified"
-            unelevated
-            size="md"
-            to="/app/parent/verify-payment"
-            class="q-ml-sm"
-          >
-            <q-tooltip>Verify Payment</q-tooltip>
-          </q-btn>
-          <q-btn
-            round
-            color="primary"
-            icon="subscriptions"
-            unelevated
-            size="md"
-            to="/app/parent/subscriptions"
-            class="q-ml-sm"
-          >
-            <q-tooltip>View Subscriptions</q-tooltip>
-          </q-btn>
-        </div>
-      </div>
-    </div>
+  <q-page class="payments-page">
+    <MobilePageHeader
+      title="My Payments"
+      subtitle="Payment history"
+    >
+      <template v-slot:actions>
+        <q-btn
+          color="secondary"
+          :label="$q.screen.gt.xs ? 'Verify' : ''"
+          icon="verified"
+          unelevated
+          to="/app/parent/verify-payment"
+          class="mobile-btn q-mr-xs"
+        />
+        <q-btn
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Subscriptions' : ''"
+          icon="subscriptions"
+          unelevated
+          to="/app/parent/subscriptions"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <!-- Skeleton Loading -->
-      <div v-if="loading" class="q-gutter-md">
-        <q-card class="payment-card" v-for="n in 3" :key="n">
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filterStatus"
+          :options="statusOptions"
+          label="Filter by Status"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchPayments"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterStudent"
+          :options="studentOptions"
+          option-label="full_name"
+          option-value="id"
+          emit-value
+          map-options
+          label="Filter by Student"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchPayments"
+          class="filter-item"
+        />
+      </div>
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
           <q-card-section>
-            <q-skeleton type="rect" height="60px" class="q-mb-md" />
-            <q-skeleton type="text" width="80%" />
-            <q-skeleton type="text" width="60%" />
-            <q-skeleton type="text" width="40%" class="q-mt-sm" />
+            <q-skeleton type="rect" height="120px" />
           </q-card-section>
         </q-card>
       </div>
-
-      <div v-else>
-        <!-- Filters (Mobile-friendly) -->
-        <div class="q-gutter-sm q-mb-md">
-          <q-select
-            v-model="filterStatus"
-            :options="statusOptions"
-            label="Filter by Status"
-            outlined
-            dense
-            clearable
-            @update:model-value="fetchPayments"
-            class="col-12 col-sm-6"
-          />
-          <q-select
-            v-model="filterStudent"
-            :options="studentOptions"
-            option-label="full_name"
-            option-value="id"
-            emit-value
-            map-options
-            label="Filter by Student"
-            outlined
-            dense
-            clearable
-            @update:model-value="fetchPayments"
-            class="col-12 col-sm-6"
-          />
-        </div>
-
-        <!-- Desktop Table -->
-        <q-table
-          v-if="$q.screen.gt.sm"
-          :rows="payments"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          flat
-          class="payments-table"
+      
+      <div v-else-if="payments.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="payment in payments"
+          :key="payment.id"
+          :title="payment.student?.full_name || 'N/A'"
+          :subtitle="payment.term?.name || 'N/A'"
+          :description="getPaymentDescription(payment)"
+          icon="payment"
+          :badge="payment.status"
+          :badge-color="getStatusColor(payment.status)"
+          icon-bg="rgba(76, 175, 80, 0.1)"
+          @click="viewPayment(payment)"
         >
+          <template v-slot:extra>
+            <div class="payment-details">
+              <div class="detail-item">
+                <div class="detail-label">Amount</div>
+                <div class="detail-value">
+                  {{ formatCurrency(payment.amount) }} {{ payment.currency || 'GHS' }}
+                </div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Date</div>
+                <div class="detail-value">{{ formatDate(payment.created_at) }}</div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewPayment(payment)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="payment" size="64px" color="grey-5" />
+        <div class="empty-text">No payments found</div>
+      </div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-gutter-sm q-mb-md">
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="filterStatus"
+                :options="statusOptions"
+                label="Filter by Status"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchPayments"
+              />
+            </div>
+            <div class="col-12 col-sm-6">
+              <q-select
+                v-model="filterStudent"
+                :options="studentOptions"
+                option-label="full_name"
+                option-value="id"
+                emit-value
+                map-options
+                label="Filter by Student"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchPayments"
+              />
+            </div>
+          </div>
+
+          <q-table
+            :rows="payments"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            flat
+            class="payments-table"
+          >
           <template v-slot:body-cell-student="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.student?.full_name || 'N/A' }}</div>
@@ -176,96 +241,8 @@
             </q-td>
           </template>
         </q-table>
-
-        <!-- Mobile Card View -->
-        <div v-if="$q.screen.lt.md" class="q-gutter-md">
-          <q-card
-            v-for="payment in payments"
-            :key="payment.id"
-            class="payment-card"
-            @click="viewPayment(payment)"
-          >
-            <q-card-section class="q-pa-md">
-              <div class="row items-center justify-between q-mb-md">
-                <div>
-                  <div class="text-h6 text-weight-bold">{{ payment.student?.full_name || 'N/A' }}</div>
-                  <div class="text-caption text-grey-7">{{ payment.student?.student_number || '' }}</div>
-                </div>
-                <q-badge
-                  :color="getStatusColor(payment.status)"
-                  :label="payment.status"
-                  size="md"
-                />
-              </div>
-
-              <q-separator class="q-my-md" />
-
-              <div class="q-gutter-y-sm">
-                <div>
-                  <div class="text-caption text-grey-7">Term</div>
-                  <div class="text-body2">{{ payment.term?.name || 'N/A' }}</div>
-                  <div class="text-caption text-grey-7">{{ payment.term?.academic_year?.name || '' }}</div>
-                </div>
-                <div>
-                  <div class="text-caption text-grey-7">Amount</div>
-                  <div class="text-h6 text-weight-bold text-primary">
-                    {{ formatCurrency(payment.amount) }} {{ payment.currency || 'GHS' }}
-                  </div>
-                </div>
-                <div>
-                  <div class="text-caption text-grey-7">Payment Method</div>
-                  <div class="text-body2">{{ formatPaymentMethod(payment) }}</div>
-                </div>
-                <div>
-                  <div class="text-caption text-grey-7">Date</div>
-                  <div class="text-body2">{{ formatDate(payment.created_at) }}</div>
-                </div>
-                <div v-if="payment.reference">
-                  <div class="text-caption text-grey-7">Reference</div>
-                  <div class="text-body2">{{ payment.reference }}</div>
-                </div>
-                <div v-if="payment.verification_token && payment.status === 'pending'">
-                  <div class="text-caption text-grey-7">Verification Token</div>
-                  <div class="text-body2 text-weight-bold text-primary">{{ payment.verification_token }}</div>
-                  <div class="text-caption text-grey-6 q-mt-xs">
-                    Use this token in your payment reference
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-            <q-card-actions class="q-pa-md q-pt-none">
-              <q-btn
-                v-if="payment.status === 'pending' && payment.verification_token"
-                flat
-                label="Verify Payment"
-                color="positive"
-                icon="verified"
-                @click.stop="goToVerify(payment)"
-                class="full-width q-mb-sm"
-                size="md"
-              />
-              <q-btn
-                flat
-                label="View Details"
-                color="primary"
-                icon="chevron_right"
-                icon-right="chevron_right"
-                @click.stop="viewPayment(payment)"
-                class="full-width"
-                size="md"
-              />
-            </q-card-actions>
-          </q-card>
-        </div>
-
-        <div v-if="!loading && payments.length === 0" class="empty-state text-center q-pa-lg">
-          <q-icon name="payment" size="64px" color="grey-5" class="q-mb-md" />
-          <div class="text-h6 text-grey-7 q-mb-sm">No Payments Found</div>
-          <div class="text-body2 text-grey-6">
-            You haven't made any payments yet.
-          </div>
-        </div>
-      </div>
+        </q-card-section>
+      </q-card>
     </div>
   </q-page>
 </template>
@@ -275,6 +252,9 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -406,12 +386,136 @@ function goToVerify(payment) {
     },
   });
 }
+
+function getPaymentDescription(payment) {
+  const parts = [];
+  if (payment.term?.academic_year?.name) {
+    parts.push(`Year: ${payment.term.academic_year.name}`);
+  }
+  if (payment.payment_method) {
+    parts.push(`Method: ${formatPaymentMethod(payment)}`);
+  }
+  if (payment.reference) {
+    parts.push(`Ref: ${payment.reference}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.payments-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.payment-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  
+  .detail-item {
+    .detail-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .detail-value {
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
+.widget-card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(10px);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .parent-header {

@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Models\User;
 use App\Services\MomoPaymentService;
 use App\Services\DirectMomoService;
+use App\Mail\PaymentNotificationMail;
+use App\Mail\PaymentReceiptMail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class PaymentController extends BaseApiController
@@ -407,6 +412,13 @@ class PaymentController extends BaseApiController
         // If payment reference is provided, mark as completed immediately
         if ($request->get('payment_reference')) {
             $payment->markAsCompleted('accounts_manager');
+            
+            // Send email notification to admin/accounts managers
+            $payment->load(['parent.user', 'student', 'term']);
+            $this->sendAdminPaymentNotification($payment);
+            
+            // Send receipt email to parent
+            $this->sendParentReceipt($payment);
         }
 
         $payment->load(['student', 'term', 'parent.user', 'initiatedBy']);
@@ -464,6 +476,12 @@ class PaymentController extends BaseApiController
             $notificationService = app(\App\Services\NotificationService::class);
             $notificationService->sendPaymentNotification($payment, 'completed');
             
+            // Send email notification to admin/accounts managers
+            $this->sendAdminPaymentNotification($payment);
+            
+            // Send receipt email to parent
+            $this->sendParentReceipt($payment);
+            
             return $this->success([
                 'payment' => $payment,
             ], 'Fee payment verified successfully');
@@ -495,6 +513,8 @@ class PaymentController extends BaseApiController
                     // Payment verified - mark as completed
                     $payment->markAsCompleted('auto_verification');
                     
+                    $payment->load(['parent.user', 'student', 'term']);
+                    
                     // Create subscription if it's a subscription payment
                     if ($payment->isSubscriptionPayment()) {
                         $existingSubscription = Subscription::where('parent_id', $payment->parent_id)
@@ -517,6 +537,10 @@ class PaymentController extends BaseApiController
                                 'payment_id' => $payment->id,
                             ]);
                         }
+                    } else {
+                        // For fee payments, send admin notification and parent receipt
+                        $this->sendAdminPaymentNotification($payment);
+                        $this->sendParentReceipt($payment);
                     }
 
                     \Log::info('Payment auto-verified via status check', [
@@ -677,7 +701,7 @@ class PaymentController extends BaseApiController
                 ], 'Payment verified successfully');
             }
 
-            // Create subscription automatically
+                    // Create subscription automatically
             $term = $payment->term;
             $subscription = Subscription::create([
                 'parent_id' => $payment->parent_id,
@@ -700,7 +724,14 @@ class PaymentController extends BaseApiController
             ], 'Payment verified and subscription activated successfully');
         } else {
             // For fee payments, just return success
-            $payment->load(['student', 'term']);
+            $payment->load(['student', 'term', 'parent.user']);
+            
+            // Send email notification to admin/accounts managers
+            $this->sendAdminPaymentNotification($payment);
+            
+            // Send receipt email to parent
+            $this->sendParentReceipt($payment);
+            
             return $this->success([
                 'payment' => $payment,
                 'message' => 'Fee payment verified successfully!',
@@ -918,6 +949,156 @@ class PaymentController extends BaseApiController
             'payment_id' => $paymentId,
             'provider' => $provider,
         ]);
+    }
+
+    /**
+     * Send email notification to admin/accounts managers when fee payment is completed
+     */
+    private function sendAdminPaymentNotification(Payment $payment): void
+    {
+        if (!$payment->isFeePayment() || $payment->status !== 'completed') {
+            return;
+        }
+
+        try {
+            $payment->load(['parent.user', 'student', 'term']);
+            $schoolId = $payment->student->school_id ?? $payment->parent->user->school_id ?? null;
+
+            if (!$schoolId) {
+                return;
+            }
+
+            // Get all school admins and accounts managers
+            $admins = User::where('school_id', $schoolId)
+                ->whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['school_admin', 'accounts_manager']);
+                })
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($admins as $admin) {
+                if ($admin->email) {
+                    Mail::to($admin->email)->send(new PaymentNotificationMail($payment));
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send admin payment notification email', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send receipt email to parent
+     */
+    private function sendParentReceipt(Payment $payment): void
+    {
+        if ($payment->status !== 'completed') {
+            return;
+        }
+
+        try {
+            $payment->load(['parent.user', 'student', 'term']);
+            
+            if (!$payment->parent || !$payment->parent->user || !$payment->parent->user->email) {
+                return;
+            }
+
+            Mail::to($payment->parent->user->email)->send(new PaymentReceiptMail($payment));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send parent receipt email', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Download payment receipt as PDF
+     */
+    public function downloadReceipt(Request $request, Payment $payment): \Illuminate\Http\Response
+    {
+        $user = auth()->user();
+        
+        // Check authorization
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            if (!$parent || $payment->parent_id !== $parent->id) {
+                return response('Unauthorized', 403);
+            }
+        } elseif (!$user->isSchoolAdmin() && !$user->isSuperAdmin() && !$user->isAccountsManager()) {
+            return response('Unauthorized', 403);
+        }
+
+        // Ensure payment is completed
+        if ($payment->status !== 'completed') {
+            return response('Receipt can only be generated for completed payments', 422);
+        }
+
+        $payment->load(['student', 'term', 'parent.user']);
+        
+        // Get school information
+        $school = $payment->student->school ?? null;
+        
+        $data = [
+            'payment' => $payment,
+            'school' => $school,
+            'generated_at' => now(),
+        ];
+
+        // Generate PDF with 80mm x 80mm paper size (POS receipt format)
+        // 80mm = 226.77 points (1mm = 2.83465 points)
+        $pdf = Pdf::loadView('receipts.pos', $data);
+        $pdf->setPaper([0, 0, 226.77, 226.77], 'portrait'); // 80mm x 80mm in points
+
+        $filename = "receipt_{$payment->reference}.pdf";
+        
+        $action = $request->get('action', 'download'); // 'preview' or 'download'
+
+        if ($action === 'preview') {
+            return response($pdf->output(), 200)
+                ->header('Content-Type', 'application/pdf')
+                ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+        }
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Email receipt to parent
+     */
+    public function emailReceipt(Request $request, Payment $payment): JsonResponse
+    {
+        $user = auth()->user();
+        
+        // Check authorization
+        if ($user->isParent()) {
+            $parent = $user->parent;
+            if (!$parent || $payment->parent_id !== $parent->id) {
+                return $this->error('Unauthorized', 403);
+            }
+        } elseif (!$user->isSchoolAdmin() && !$user->isSuperAdmin() && !$user->isAccountsManager()) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        // Ensure payment is completed
+        if ($payment->status !== 'completed') {
+            return $this->error('Receipt can only be sent for completed payments', 422);
+        }
+
+        try {
+            $this->sendParentReceipt($payment);
+            
+            return $this->success(null, 'Receipt email sent successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send receipt email', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+            
+            return $this->error('Failed to send receipt email: ' . $e->getMessage(), 500);
+        }
     }
 }
 

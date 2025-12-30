@@ -1,80 +1,208 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Exams</div>
-        <div class="text-body2 text-grey-7">View and manage all exams</div>
+  <q-page class="exams-list-page">
+    <MobilePageHeader
+      title="Exams"
+      subtitle="View and manage all exams"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Create Exam' : ''"
+          icon="add"
+          unelevated
+          to="/app/exams/create"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-select
+          v-model="filterTerm"
+          :options="terms"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Term"
+          @update:model-value="onFilter"
+          :loading="loadingTerms"
+          class="filter-item"
+        />
+        <q-select
+          v-model="filterClass"
+          :options="classes"
+          option-label="name"
+          option-value="id"
+          emit-value
+          map-options
+          outlined
+          dense
+          clearable
+          label="Filter by Class"
+          @update:model-value="onFilter"
+          :loading="loadingClasses"
+          class="filter-item"
+        />
+        <q-input
+          v-model="searchQuery"
+          outlined
+          dense
+          placeholder="Search exams..."
+          @update:model-value="onSearch"
+          clearable
+          class="filter-item"
+        >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
       </div>
-      <q-btn
-        v-if="authStore.isTeacher || authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Create Exam"
-        icon="add"
-        unelevated
-        to="/app/exams/create"
-      />
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="exams.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="exam in exams"
+          :key="exam.id"
+          :title="exam.title || 'Exam'"
+          :subtitle="exam.class_subject?.subject?.name || 'N/A'"
+          :description="getExamDescription(exam)"
+          icon="quiz"
+          :badge="exam.is_finalized ? 'Verified' : 'Pending'"
+          :badge-color="exam.is_finalized ? 'positive' : 'warning'"
+          icon-bg="rgba(63, 81, 181, 0.1)"
+          @click="viewExam(exam.id)"
+        >
+          <template v-slot:extra>
+            <div class="exam-details">
+              <div class="detail-item">
+                <div class="detail-label">Total Marks</div>
+                <div class="detail-value">{{ exam.total_marks }}</div>
+              </div>
+              <div class="detail-item">
+                <div class="detail-label">Weight</div>
+                <div class="detail-value">{{ exam.weight }}%</div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewExam(exam.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="showActionButtons(exam, 'verify')"
+                flat
+                dense
+                icon="check_circle"
+                color="positive"
+                label="Verify"
+                @click.stop="verifyExam(exam)"
+                size="sm"
+              />
+              <q-btn
+                v-if="showActionButtons(exam, 'edit')"
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editExam(exam.id)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="quiz" size="64px" color="grey-5" />
+        <div class="empty-text">No exams found</div>
+      </div>
     </div>
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <div class="row q-mb-md">
-          <div class="col-12 col-md-4">
-            <q-select
-              v-model="filterTerm"
-              :options="terms"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Term"
-              @update:model-value="onFilter"
-              :loading="loadingTerms"
-            />
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-mb-md">
+            <div class="col-12 col-md-4">
+              <q-select
+                v-model="filterTerm"
+                :options="terms"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Term"
+                @update:model-value="onFilter"
+                :loading="loadingTerms"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-select
+                v-model="filterClass"
+                :options="classes"
+                option-label="name"
+                option-value="id"
+                emit-value
+                map-options
+                outlined
+                dense
+                clearable
+                label="Filter by Class"
+                @update:model-value="onFilter"
+                :loading="loadingClasses"
+              />
+            </div>
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="searchQuery"
+                outlined
+                dense
+                placeholder="Search exams..."
+                @update:model-value="onSearch"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
           </div>
-          <div class="col-12 col-md-4">
-            <q-select
-              v-model="filterClass"
-              :options="classes"
-              option-label="name"
-              option-value="id"
-              emit-value
-              map-options
-              outlined
-              dense
-              clearable
-              label="Filter by Class"
-              @update:model-value="onFilter"
-              :loading="loadingClasses"
-            />
-          </div>
-          <div class="col-12 col-md-4">
-            <q-input
-              v-model="searchQuery"
-              outlined
-              dense
-              placeholder="Search exams..."
-              @update:model-value="onSearch"
-              clearable
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-        </div>
 
-        <q-table
-          :rows="exams"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="exams"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-class_subject="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.class_subject?.subject?.name || 'N/A' }}</div>
@@ -162,7 +290,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -171,6 +300,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -425,13 +557,138 @@ function formatDate(date) {
     year: 'numeric',
   });
 }
+
+function getExamDescription(exam) {
+  const parts = [];
+  if (exam.class_subject?.class?.name) {
+    parts.push(`Class: ${exam.class_subject.class.name}`);
+  }
+  if (exam.term?.name) {
+    parts.push(`Term: ${exam.term.name}`);
+  }
+  if (exam.assessment_date) {
+    parts.push(`Date: ${formatDate(exam.assessment_date)}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
+.exams-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.exam-details {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  
+  .detail-item {
+    .detail-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .detail-value {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>

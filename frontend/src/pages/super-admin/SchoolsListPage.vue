@@ -1,64 +1,163 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Schools Management</div>
-        <div class="text-body2 text-grey-7">Manage all schools in the system</div>
-      </div>
-      <q-btn
-        color="primary"
-        label="Add School"
-        icon="add"
-        unelevated
-        @click="showCreateDialog = true"
-      />
-    </div>
+  <q-page class="schools-list-page">
+    <MobilePageHeader
+      title="Schools Management"
+      subtitle="Manage all schools in the system"
+    >
+      <template v-slot:actions>
+        <q-btn
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Add School' : ''"
+          icon="add"
+          unelevated
+          @click="showCreateDialog = true"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
 
     <!-- Search and Filters -->
-    <q-card class="widget-card q-mb-md">
-      <q-card-section>
-        <div class="row q-gutter-md">
-          <div class="col-12 col-md-4">
-            <q-input
-              v-model="searchQuery"
-              placeholder="Search schools..."
-              outlined
-              dense
-              clearable
-              @update:model-value="fetchSchools"
-            >
-              <template v-slot:prepend>
-                <q-icon name="search" />
-              </template>
-            </q-input>
-          </div>
-          <div class="col-12 col-md-3">
-            <q-select
-              v-model="statusFilter"
-              :options="statusOptions"
-              label="Status"
-              outlined
-              dense
-              clearable
-              @update:model-value="fetchSchools"
-            />
-          </div>
-        </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Schools Table -->
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-table
-          :rows="schools"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <div class="filters-grid">
+        <q-input
+          v-model="searchQuery"
+          placeholder="Search schools..."
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchSchools"
+          class="filter-item"
         >
+          <template v-slot:prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+        <q-select
+          v-model="statusFilter"
+          :options="statusOptions"
+          label="Status"
+          outlined
+          dense
+          clearable
+          @update:model-value="fetchSchools"
+          class="filter-item"
+        />
+      </div>
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="100px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="schools.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="school in schools"
+          :key="school.id"
+          :title="school.name"
+          :subtitle="school.domain || 'No domain'"
+          :description="getSchoolDescription(school)"
+          icon="school"
+          :badge="school.is_active ? 'Active' : 'Inactive'"
+          :badge-color="school.is_active ? 'positive' : 'negative'"
+          icon-bg="rgba(33, 150, 243, 0.1)"
+          @click="viewSchool(school.id)"
+        >
+          <template v-slot:extra>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewSchool(school.id)"
+                size="sm"
+              />
+              <q-btn
+                flat
+                dense
+                icon="login"
+                color="secondary"
+                label="Sign In"
+                @click.stop="signInAsSchool(school)"
+                size="sm"
+              />
+              <q-btn
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editSchool(school)"
+                size="sm"
+              />
+              <q-btn
+                flat
+                dense
+                icon="delete"
+                color="negative"
+                label="Delete"
+                @click.stop="confirmDelete(school)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="school" size="64px" color="grey-5" />
+        <div class="empty-text">No schools found</div>
+      </div>
+    </div>
+
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card">
+        <q-card-section>
+          <div class="row q-gutter-md q-mb-md">
+            <div class="col-12 col-md-4">
+              <q-input
+                v-model="searchQuery"
+                placeholder="Search schools..."
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchSchools"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-12 col-md-3">
+              <q-select
+                v-model="statusFilter"
+                :options="statusOptions"
+                label="Status"
+                outlined
+                dense
+                clearable
+                @update:model-value="fetchSchools"
+              />
+            </div>
+          </div>
+
+          <q-table
+            :rows="schools"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-is_active="props">
             <q-td :props="props">
               <q-badge
@@ -106,7 +205,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
 
     <!-- Create/Edit School Dialog -->
     <q-dialog v-model="showCreateDialog" persistent>
@@ -217,6 +317,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -449,14 +552,115 @@ async function signInAsSchool(school) {
     }
   });
 }
+
+function getSchoolDescription(school) {
+  const parts = [];
+  if (school.code) {
+    parts.push(`Code: ${school.code}`);
+  }
+  if (school.email) {
+    parts.push(`Email: ${school.email}`);
+  }
+  if (school.phone) {
+    parts.push(`Phone: ${school.phone}`);
+  }
+  return parts.join(' • ') || 'No additional details';
+}
 </script>
 
 <style lang="scss" scoped>
+.schools-list-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.filter-item {
+  width: 100%;
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>
 

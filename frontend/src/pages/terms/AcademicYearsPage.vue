@@ -1,41 +1,125 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center justify-between q-mb-lg">
-      <div>
-        <div class="text-h5 text-weight-bold">Academic Years</div>
-        <div class="text-body2 text-grey-7">Manage academic years</div>
-      </div>
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
-        color="primary"
-        label="Add Academic Year"
-        icon="add"
-        unelevated
-        to="/app/academic-years/create"
+  <q-page class="academic-years-page">
+    <MobilePageHeader
+      title="Academic Years"
+      subtitle="Manage academic years"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Add Academic Year' : ''"
+          icon="add"
+          unelevated
+          to="/app/academic-years/create"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <!-- Filters -->
+    <MobileCard variant="default" padding="md" class="filters-card">
+      <q-toggle
+        v-model="filterActive"
+        label="Show Active Only"
+        @update:model-value="onFilter"
       />
+    </MobileCard>
+
+    <!-- Mobile Card View -->
+    <div class="mobile-list-view">
+      <div v-if="loading" class="loading-cards">
+        <q-card v-for="i in 3" :key="i" class="mobile-list-card">
+          <q-card-section>
+            <q-skeleton type="rect" height="80px" />
+          </q-card-section>
+        </q-card>
+      </div>
+      
+      <div v-else-if="academicYears.length > 0" class="cards-container">
+        <MobileListCard
+          v-for="year in academicYears"
+          :key="year.id"
+          :title="year.name"
+          :subtitle="getYearDates(year)"
+          :description="getYearDescription(year)"
+          icon="calendar_today"
+          :badge="year.is_active ? 'Active' : 'Inactive'"
+          :badge-color="year.is_active ? 'positive' : 'grey'"
+          icon-bg="rgba(76, 175, 80, 0.1)"
+          @click="viewAcademicYear(year.id)"
+        >
+          <template v-slot:extra>
+            <div class="year-stats">
+              <div class="stat-item">
+                <div class="stat-label">Terms</div>
+                <div class="stat-value">{{ year.terms?.length || 0 }}</div>
+              </div>
+            </div>
+            <div class="card-actions">
+              <q-btn
+                flat
+                dense
+                icon="visibility"
+                color="primary"
+                label="View"
+                @click.stop="viewAcademicYear(year.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin"
+                flat
+                dense
+                icon="edit"
+                color="primary"
+                label="Edit"
+                @click.stop="editAcademicYear(year.id)"
+                size="sm"
+              />
+              <q-btn
+                v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin && !year.is_active"
+                flat
+                dense
+                icon="play_arrow"
+                color="positive"
+                label="Activate"
+                @click.stop="activateAcademicYear(year.id)"
+                size="sm"
+              />
+            </div>
+          </template>
+        </MobileListCard>
+      </div>
+      
+      <div v-else class="empty-state">
+        <q-icon name="calendar_today" size="64px" color="grey-5" />
+        <div class="empty-text">No academic years found</div>
+      </div>
     </div>
 
-    <q-card class="widget-card q-pa-md">
-      <q-card-section>
-        <div class="row q-mb-md">
-          <div class="col-12 col-md-6">
-            <q-toggle
-              v-model="filterActive"
-              label="Show Active Only"
-              @update:model-value="onFilter"
-            />
+    <!-- Desktop Table View -->
+    <div class="desktop-table-view">
+      <q-card class="widget-card q-pa-md">
+        <q-card-section>
+          <div class="row q-mb-md">
+            <div class="col-12 col-md-6">
+              <q-toggle
+                v-model="filterActive"
+                label="Show Active Only"
+                @update:model-value="onFilter"
+              />
+            </div>
           </div>
-        </div>
 
-        <q-table
-          :rows="academicYears"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+          <q-table
+            :rows="academicYears"
+            :columns="columns"
+            row-key="id"
+            :loading="loading"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-dates="props">
             <q-td :props="props">
               <div class="text-body2">{{ formatDate(props.row.start_date) }}</div>
@@ -89,7 +173,8 @@
           </template>
         </q-table>
       </q-card-section>
-    </q-card>
+      </q-card>
+    </div>
   </q-page>
 </template>
 
@@ -98,6 +183,9 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
+import MobileListCard from 'src/components/mobile/MobileListCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -226,16 +314,124 @@ const activateAcademicYear = async (id) => {
   }
 };
 
+function getYearDates(year) {
+  if (year.start_date && year.end_date) {
+    return `${formatDate(year.start_date)} - ${formatDate(year.end_date)}`;
+  }
+  return 'Dates not set';
+}
+
+function getYearDescription(year) {
+  const parts = [];
+  if (year.terms?.length > 0) {
+    parts.push(`${year.terms.length} term${year.terms.length > 1 ? 's' : ''}`);
+  }
+  return parts.join(' • ') || 'No terms added';
+}
+
 onMounted(() => {
   fetchAcademicYears();
 });
 </script>
 
 <style lang="scss" scoped>
+.academic-years-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.filters-card {
+  margin-bottom: var(--spacing-md);
+}
+
+.mobile-list-view {
+  display: block;
+  
+  @media (min-width: 960px) {
+    display: none;
+  }
+}
+
+.desktop-table-view {
+  display: none;
+  
+  @media (min-width: 960px) {
+    display: block;
+  }
+}
+
+.loading-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.year-stats {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  
+  .stat-item {
+    .stat-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .stat-value {
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+}
+
+.card-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-md);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
+}
+
 .widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
   backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  
+  @media (min-width: 768px) {
+    box-shadow: var(--shadow-md);
+  }
 }
 </style>

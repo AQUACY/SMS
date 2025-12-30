@@ -1,22 +1,16 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        @click="$router.push('/app/report-cards')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Generate Report Card</div>
-        <div class="text-body2 text-grey-7">Select student and term to generate report card</div>
-      </div>
-    </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Generate Report Card"
+      subtitle="Select student and term to generate report card"
+      :show-back="true"
+      @back="$router.push('/app/report-cards')"
+    />
 
-    <q-card class="widget-card">
-      <q-card-section>
-        <q-form @submit="generateReportCard" class="q-gutter-md">
-          <div class="row q-col-gutter-md">
+    <div class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="generateReportCard" class="form">
+          <div class="form-grid">
             <div class="col-12 col-md-6">
               <q-select
                 v-model="form.term_id"
@@ -81,28 +75,25 @@
             </div>
           </div>
 
-          <div class="row q-mt-lg">
-            <div class="col-12">
-              <q-btn
-                type="submit"
-                color="primary"
-                label="Generate Report Card"
-                icon="description"
-                unelevated
-                :loading="submitting"
-                :disable="!form.term_id || !form.student_id"
-              />
-              <q-btn
-                flat
-                label="Cancel"
-                @click="$router.push('/app/report-cards')"
-                class="q-ml-sm"
-              />
-            </div>
+          <div class="form-actions">
+            <q-btn
+              flat
+              label="Cancel"
+              @click="$router.push('/app/report-cards')"
+              class="q-mr-sm"
+            />
+            <q-btn
+              type="submit"
+              color="primary"
+              label="Generate Report Card"
+              icon="description"
+              :loading="submitting"
+              :disable="!form.term_id || !form.student_id"
+            />
           </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -110,6 +101,8 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const router = useRouter();
@@ -235,10 +228,41 @@ function formatDate(date) {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>

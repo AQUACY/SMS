@@ -1,194 +1,181 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.push('/app/terms')"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Term Details</div>
-        <div class="text-body2 text-grey-7">View and manage term information</div>
-      </div>
-      <q-space />
-      <q-btn
-        v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin && canEdit"
-        color="primary"
-        label="Edit Term"
-        icon="edit"
-        unelevated
-        @click="router.push(`/app/terms/${termId}/edit`)"
-        class="q-mr-sm"
-      />
+  <q-page class="term-detail-page">
+    <MobilePageHeader
+      title="Term Details"
+      subtitle="View and manage term information"
+      :show-back="true"
+      @back="router.push('/app/terms')"
+    >
+      <template v-slot:actions>
+        <q-btn
+          v-if="authStore.isSchoolAdmin || authStore.isSuperAdmin && canEdit"
+          color="primary"
+          :label="$q.screen.gt.xs ? 'Edit Term' : ''"
+          icon="edit"
+          unelevated
+          @click="router.push(`/app/terms/${termId}/edit`)"
+          class="mobile-btn"
+        />
+      </template>
+    </MobilePageHeader>
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard v-for="i in 3" :key="i" variant="default" padding="md" class="q-mb-md">
+        <q-skeleton type="rect" height="100px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-if="loading" class="row justify-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
-
-    <div v-else-if="term" class="row q-col-gutter-md">
-      <!-- Left Column - Term Information -->
-      <div class="col-12 col-md-8">
-        <!-- Basic Information Card -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <q-avatar size="80px" class="bg-primary q-mr-md">
-                <q-icon name="event" size="48px" color="white" />
-              </q-avatar>
-              <div>
-                <div class="text-h5 text-weight-bold q-mb-xs">{{ term.name }}</div>
-                <div class="text-body2 text-grey-7 q-mb-xs">
-                  Term {{ term.term_number }} - {{ term.academic_year?.name || 'N/A' }}
-                </div>
-                <q-badge
-                  :color="getStatusColor(term.status)"
-                  :label="formatStatus(term.status)"
-                />
-              </div>
+    <div v-else-if="term" class="detail-content">
+      <!-- Basic Information Card -->
+      <MobileCard variant="default" padding="lg" class="info-card q-mb-md">
+        <div class="term-header">
+          <q-avatar size="80px" class="term-avatar bg-primary">
+            <q-icon name="event" size="48px" color="white" />
+          </q-avatar>
+          <div class="term-info">
+            <div class="term-name">{{ term.name }}</div>
+            <div class="term-subtitle">
+              Term {{ term.term_number }} - {{ term.academic_year?.name || 'N/A' }}
             </div>
+            <q-badge
+              :color="getStatusColor(term.status)"
+              :label="formatStatus(term.status)"
+              class="q-mt-xs"
+            />
+          </div>
+        </div>
 
-            <q-separator class="q-my-md" />
+        <q-separator class="q-my-md" />
 
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-grey-7 q-mb-xs">Start Date</div>
-                <div class="text-body1">{{ formatDate(term.start_date) }}</div>
-              </div>
-              <div class="col-12 col-sm-6">
-                <div class="text-caption text-grey-7 q-mb-xs">End Date</div>
-                <div class="text-body1">{{ formatDate(term.end_date) }}</div>
-              </div>
-              <div class="col-12 col-sm-6" v-if="term.grace_period_days">
-                <div class="text-caption text-grey-7 q-mb-xs">Grace Period</div>
-                <div class="text-body1">{{ term.grace_period_days }} days</div>
-              </div>
-              <div class="col-12 col-sm-6" v-if="term.grace_period_end">
-                <div class="text-caption text-grey-7 q-mb-xs">Grace Period Ends</div>
-                <div class="text-body1">{{ formatDate(term.grace_period_end) }}</div>
-              </div>
-              <div class="col-12 col-sm-6" v-if="term.closed_at">
-                <div class="text-caption text-grey-7 q-mb-xs">Closed At</div>
-                <div class="text-body1">{{ formatDateTime(term.closed_at) }}</div>
-              </div>
-              <div class="col-12 col-sm-6" v-if="term.archived_at">
-                <div class="text-caption text-grey-7 q-mb-xs">Archived At</div>
-                <div class="text-body1">{{ formatDateTime(term.archived_at) }}</div>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Start Date</div>
+            <div class="info-value">{{ formatDate(term.start_date) }}</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">End Date</div>
+            <div class="info-value">{{ formatDate(term.end_date) }}</div>
+          </div>
+          <div class="info-item" v-if="term.grace_period_days">
+            <div class="info-label">Grace Period</div>
+            <div class="info-value">{{ term.grace_period_days }} days</div>
+          </div>
+          <div class="info-item" v-if="term.grace_period_end">
+            <div class="info-label">Grace Period Ends</div>
+            <div class="info-value">{{ formatDate(term.grace_period_end) }}</div>
+          </div>
+          <div class="info-item" v-if="term.closed_at">
+            <div class="info-label">Closed At</div>
+            <div class="info-value">{{ formatDateTime(term.closed_at) }}</div>
+          </div>
+          <div class="info-item" v-if="term.archived_at">
+            <div class="info-label">Archived At</div>
+            <div class="info-value">{{ formatDateTime(term.archived_at) }}</div>
+          </div>
+        </div>
+      </MobileCard>
 
-        <!-- Assessments Card -->
-        <q-card class="widget-card q-mb-md">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Assessments ({{ assessments.length }})</div>
-            <q-list v-if="assessments.length > 0" separator>
-              <q-item v-for="assessment in assessments" :key="assessment.id">
-                <q-item-section avatar>
-                  <q-icon name="assignment" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>{{ assessment.name }}</q-item-label>
-                  <q-item-label caption>
-                    Type: {{ assessment.type }} | Total Marks: {{ assessment.total_marks }}
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-badge :color="assessment.is_finalized ? 'positive' : 'warning'">
-                    {{ assessment.is_finalized ? 'Finalized' : 'Draft' }}
-                  </q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-            <div v-else class="text-body2 text-grey-7">No assessments for this term</div>
-          </q-card-section>
-        </q-card>
+      <!-- Assessments Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Assessments ({{ assessments.length }})</div>
+        <q-list v-if="assessments.length > 0" separator>
+          <q-item v-for="assessment in assessments" :key="assessment.id">
+            <q-item-section avatar>
+              <q-icon name="assignment" color="primary" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ assessment.name }}</q-item-label>
+              <q-item-label caption>
+                Type: {{ assessment.type }} | Total Marks: {{ assessment.total_marks }}
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-badge :color="assessment.is_finalized ? 'positive' : 'warning'">
+                {{ assessment.is_finalized ? 'Finalized' : 'Draft' }}
+              </q-badge>
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <div v-else class="empty-text">No assessments for this term</div>
+      </MobileCard>
 
-        <!-- Subscriptions Card -->
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Subscriptions ({{ subscriptions.length }})</div>
-            <q-list v-if="subscriptions.length > 0" separator>
-              <q-item v-for="subscription in subscriptions" :key="subscription.id">
-                <q-item-section avatar>
-                  <q-icon name="payment" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>
-                    {{ subscription.student?.first_name }} {{ subscription.student?.last_name }}
-                  </q-item-label>
-                  <q-item-label caption>
-                    Status: {{ subscription.status }} | Amount: {{ subscription.currency }} {{ subscription.amount }}
-                  </q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-badge :color="subscription.status === 'active' ? 'positive' : 'grey'">
-                    {{ subscription.status }}
-                  </q-badge>
-                </q-item-section>
-              </q-item>
-            </q-list>
-            <div v-else class="text-body2 text-grey-7">No subscriptions for this term</div>
-          </q-card-section>
-        </q-card>
-      </div>
+      <!-- Subscriptions Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Subscriptions ({{ subscriptions.length }})</div>
+        <q-list v-if="subscriptions.length > 0" separator>
+          <q-item v-for="subscription in subscriptions" :key="subscription.id">
+            <q-item-section avatar>
+              <q-icon name="payment" color="primary" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>
+                {{ subscription.student?.first_name }} {{ subscription.student?.last_name }}
+              </q-item-label>
+              <q-item-label caption>
+                Status: {{ subscription.status }} | Amount: {{ subscription.currency }} {{ subscription.amount }}
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-badge :color="subscription.status === 'active' ? 'positive' : 'grey'">
+                {{ subscription.status }}
+              </q-badge>
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <div v-else class="empty-text">No subscriptions for this term</div>
+      </MobileCard>
 
-      <!-- Right Column - Lifecycle Actions -->
-      <div class="col-12 col-md-4">
-        <q-card class="widget-card">
-          <q-card-section>
-            <div class="text-h6 q-mb-md">Term Lifecycle</div>
-            <div class="q-gutter-sm">
-              <q-btn
-                v-if="term.status === 'draft' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
-                flat
-                color="positive"
-                icon="play_arrow"
-                label="Activate Term"
-                @click="activateTerm"
-                :loading="actionLoading"
-                class="full-width"
-              />
-              <q-btn
-                v-if="term.status === 'active' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
-                flat
-                color="warning"
-                icon="schedule"
-                label="Start Closing"
-                @click="startClosing"
-                :loading="actionLoading"
-                class="full-width"
-              />
-              <q-btn
-                v-if="['active', 'closing'].includes(term.status) && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
-                flat
-                color="negative"
-                icon="lock"
-                label="Close Term"
-                @click="closeTerm"
-                :loading="actionLoading"
-                class="full-width"
-              />
-              <q-btn
-                v-if="term.status === 'closed' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
-                flat
-                color="dark"
-                icon="archive"
-                label="Archive Term"
-                @click="archiveTerm"
-                :loading="actionLoading"
-                class="full-width"
-              />
-              <div v-if="!canPerformAction" class="text-body2 text-grey-7 text-center q-pa-md">
-                No actions available for this term status
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
+      <!-- Term Lifecycle Card -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Term Lifecycle</div>
+        <div class="action-buttons">
+          <q-btn
+            v-if="term.status === 'draft' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
+            flat
+            color="positive"
+            icon="play_arrow"
+            label="Activate Term"
+            @click="activateTerm"
+            :loading="actionLoading"
+            class="full-width q-mb-sm"
+          />
+          <q-btn
+            v-if="term.status === 'active' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
+            flat
+            color="warning"
+            icon="schedule"
+            label="Start Closing"
+            @click="startClosing"
+            :loading="actionLoading"
+            class="full-width q-mb-sm"
+          />
+          <q-btn
+            v-if="['active', 'closing'].includes(term.status) && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
+            flat
+            color="negative"
+            icon="lock"
+            label="Close Term"
+            @click="closeTerm"
+            :loading="actionLoading"
+            class="full-width q-mb-sm"
+          />
+          <q-btn
+            v-if="term.status === 'closed' && (authStore.isSchoolAdmin || authStore.isSuperAdmin)"
+            flat
+            color="dark"
+            icon="archive"
+            label="Archive Term"
+            @click="archiveTerm"
+            :loading="actionLoading"
+            class="full-width"
+          />
+          <div v-if="!canPerformAction" class="empty-text">
+            No actions available for this term status
+          </div>
+        </div>
+      </MobileCard>
     </div>
   </q-page>
 </template>
@@ -198,6 +185,8 @@ import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/auth';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -396,10 +385,115 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.term-detail-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--spacing-lg);
+  }
+}
+
+.info-card {
+  @media (min-width: 768px) {
+    grid-column: 1;
+  }
+}
+
+.term-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.term-avatar {
+  flex-shrink: 0;
+}
+
+.term-info {
+  flex: 1;
+}
+
+.term-name {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.term-subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.info-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-value {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.mobile-btn {
+  @media (max-width: 599px) {
+    min-width: 0;
+    padding: var(--spacing-sm);
+  }
 }
 </style>

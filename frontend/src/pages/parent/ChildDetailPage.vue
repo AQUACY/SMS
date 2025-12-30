@@ -1,286 +1,251 @@
 <template>
-  <q-page class="parent-page">
-    <!-- Mobile Header -->
-    <div class="parent-header q-pa-md">
-      <div class="row items-center">
-        <q-btn
-          flat
-          round
-          icon="arrow_back"
-          @click="router.push('/app/parent/children')"
-          class="q-mr-sm"
-          size="md"
-        />
-        <div class="col">
-          <div class="text-h6 text-weight-bold">Child Details</div>
-          <div class="text-caption text-grey-7">Academic records</div>
-        </div>
-      </div>
+  <q-page class="child-detail-page">
+    <MobilePageHeader
+      title="Child Details"
+      subtitle="Academic records"
+      :show-back="true"
+      @back="router.push('/app/parent/children')"
+    />
+
+    <!-- Skeleton Loading -->
+    <div v-if="loading" class="detail-loading">
+      <MobileCard v-for="i in 2" :key="i" variant="default" padding="md" class="q-mb-md">
+        <q-skeleton type="rect" height="100px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <!-- Content Area -->
-    <div class="parent-content q-pa-md">
-      <!-- Skeleton Loading -->
-      <div v-if="loading" class="q-gutter-md">
-        <q-card class="info-card">
-          <q-card-section>
-            <div class="row items-center q-mb-md">
-              <q-skeleton type="QAvatar" size="80px" class="q-mr-md" />
-              <div class="col">
-                <q-skeleton type="text" width="70%" class="q-mb-sm" />
-                <q-skeleton type="text" width="40%" />
-              </div>
+    <div v-else-if="child" class="detail-content">
+      <!-- Basic Information Card -->
+      <MobileCard variant="default" padding="lg" class="info-card q-mb-md">
+        <div class="child-header">
+          <q-avatar size="80px" class="child-avatar bg-primary">
+            <q-icon name="person" size="48px" color="white" />
+          </q-avatar>
+          <div class="child-info">
+            <div class="child-name">{{ getFullName(child) }}</div>
+            <div class="child-id">ID: {{ child.student_number }}</div>
+            <q-badge
+              :color="child.is_active ? 'positive' : 'negative'"
+              :label="child.is_active ? 'Active' : 'Inactive'"
+              class="q-mt-xs"
+            />
+          </div>
+        </div>
+
+        <q-separator class="q-my-md" />
+
+        <div :class="{ 'blurred-content': !child.has_active_subscription }">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-label">Date of Birth</div>
+              <div class="info-value">{{ formatDate(child.date_of_birth) }}</div>
             </div>
-            <q-separator class="q-my-md" />
-            <q-skeleton type="text" width="60%" class="q-mb-md" />
-            <q-skeleton type="rect" height="200px" />
-          </q-card-section>
-        </q-card>
-        <q-card class="actions-card">
-          <q-card-section>
-            <q-skeleton type="text" width="60%" class="q-mb-md" />
-            <q-skeleton type="list" />
-          </q-card-section>
-        </q-card>
-      </div>
+            <div class="info-item">
+              <div class="info-label">Gender</div>
+              <div class="info-value">{{ child.gender ? child.gender.charAt(0).toUpperCase() + child.gender.slice(1) : 'Not provided' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Email</div>
+              <div class="info-value">{{ child.email || 'Not provided' }}</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Phone</div>
+              <div class="info-value">{{ child.phone || 'Not provided' }}</div>
+            </div>
+            <div class="info-item full-width">
+              <div class="info-label">Address</div>
+              <div class="info-value">{{ child.address || 'Not provided' }}</div>
+            </div>
+          </div>
+        </div>
+      </MobileCard>
 
-      <div v-else-if="child" class="q-gutter-md">
-          <!-- Basic Information Card -->
-          <q-card class="info-card">
-            <q-card-section class="q-pa-md">
-              <div class="row items-center q-mb-md">
-                <q-avatar size="72px" class="bg-primary q-mr-md">
-                  <q-icon name="person" size="40px" color="white" />
-                </q-avatar>
-                <div class="col">
-                  <div class="text-h6 text-weight-bold q-mb-xs">{{ getFullName(child) }}</div>
-                  <div class="text-body2 text-grey-7 q-mb-xs">ID: {{ child.student_number }}</div>
-                  <q-badge
-                    :color="child.is_active ? 'positive' : 'negative'"
-                    :label="child.is_active ? 'Active' : 'Inactive'"
-                    size="sm"
-                  />
-                </div>
-              </div>
+      <!-- Class Information Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Current Class</div>
+        <div v-if="child.active_enrollment?.class" class="class-info">
+          <q-icon name="class" size="24px" color="primary" class="q-mr-sm" />
+          <div>
+            <div class="class-name">{{ child.active_enrollment.class.name }}</div>
+            <div class="class-year">
+              Academic Year: {{ child.active_enrollment.academic_year?.name || 'N/A' }}
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-text">Not enrolled in any class</div>
+      </MobileCard>
 
-              <q-separator class="q-my-md" />
-
-              <div :class="{ 'blurred-content': !child.has_active_subscription }">
-                <div class="q-gutter-y-md">
-                  <div class="info-item">
-                    <div class="text-caption text-grey-7 q-mb-xs">Date of Birth</div>
-                    <div class="text-body1">{{ formatDate(child.date_of_birth) }}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="text-caption text-grey-7 q-mb-xs">Gender</div>
-                    <div class="text-body1">{{ child.gender ? child.gender.charAt(0).toUpperCase() + child.gender.slice(1) : 'Not provided' }}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="text-caption text-grey-7 q-mb-xs">Email</div>
-                    <div class="text-body1">{{ child.email || 'Not provided' }}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="text-caption text-grey-7 q-mb-xs">Phone</div>
-                    <div class="text-body1">{{ child.phone || 'Not provided' }}</div>
-                  </div>
-                  <div class="info-item">
-                    <div class="text-caption text-grey-7 q-mb-xs">Address</div>
-                    <div class="text-body1">{{ child.address || 'Not provided' }}</div>
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-
-          <!-- Class Information Card -->
-          <q-card class="info-card">
-            <q-card-section class="q-pa-md">
-              <div class="text-h6 q-mb-md">Current Class</div>
-              <div v-if="child.active_enrollment?.class" class="row items-center">
-                <q-icon name="class" size="24px" color="primary" class="q-mr-sm" />
-                <div>
-                  <div class="text-body1 text-weight-medium">{{ child.active_enrollment.class.name }}</div>
-                  <div class="text-caption text-grey-7">
-                    Academic Year: {{ child.active_enrollment.academic_year?.name || 'N/A' }}
-                  </div>
-                </div>
-              </div>
-              <div v-else class="text-body2 text-grey-7">Not enrolled in any class</div>
-            </q-card-section>
-          </q-card>
-
-          <!-- Quick Actions Card -->
-          <q-card class="actions-card">
-          <!-- Payment Actions Section -->
-          <q-card-section class="q-pa-md q-pb-sm">
-            <div class="text-h6 q-mb-md">Payments & Subscriptions</div>
+      <!-- Payments & Subscriptions Card -->
+      <MobileCard variant="default" padding="md" class="q-mb-md">
+        <div class="card-title">Payments & Subscriptions</div>
             
-            <!-- Pay School Fees Button -->
-            <q-btn
-              flat
-              unelevated
-              class="action-btn full-width q-mb-sm"
-              color="primary"
-              @click="paySchoolFees(child)"
-              size="lg"
-            >
-              <q-icon name="school" color="primary" size="24px" class="q-mr-sm" />
-              <div class="col text-left">
-                <div class="text-body1 text-weight-medium">Pay School Fees</div>
-                <div class="text-caption text-grey-7">Pay term fees to the school</div>
-              </div>
-              <q-icon name="chevron_right" color="grey-6" />
-            </q-btn>
-
-            <!-- Subscribe Button -->
-            <q-btn
-              flat
-              unelevated
-              class="action-btn full-width"
-              :color="child.has_active_subscription ? 'positive' : 'warning'"
-              @click="subscribeToTerm(child)"
-              size="lg"
-            >
-              <q-icon 
-                :name="child.has_active_subscription ? 'check_circle' : 'card_membership'" 
-                :color="child.has_active_subscription ? 'positive' : 'warning'" 
-                size="24px" 
-                class="q-mr-sm" 
-              />
-              <div class="col text-left">
-                <div class="text-body1 text-weight-medium">
-                  {{ child.has_active_subscription ? 'Manage Subscription' : 'Subscribe' }}
-                </div>
-                <div class="text-caption text-grey-7">
-                  {{ child.has_active_subscription ? 'View or renew subscription' : 'Subscribe to view academic records' }}
-                </div>
-              </div>
-              <q-icon name="chevron_right" color="grey-6" />
-            </q-btn>
-          </q-card-section>
-
-          <q-separator class="q-mx-md" />
-
-          <!-- Subscription Banner -->
-          <q-banner
-            v-if="!child.has_active_subscription"
-            dense
-            rounded
-            class="bg-info text-white q-ma-md"
+        <div class="action-buttons">
+          <!-- Pay School Fees Button -->
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width q-mb-sm"
+            color="primary"
+            @click="paySchoolFees(child)"
+            size="lg"
           >
-            <template v-slot:avatar>
-              <q-icon name="info" color="white" />
-            </template>
-            <div class="text-body2">
-              Subscribe to unlock full access to your child's academic records, attendance, results, and report cards.
+            <q-icon name="school" color="primary" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">Pay School Fees</div>
+              <div class="text-caption text-grey-7">Pay term fees to the school</div>
             </div>
-          </q-banner>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
 
-          <q-card-section class="q-pa-md">
-            <div class="text-h6 q-mb-md">Quick Actions</div>
-            <div class="q-gutter-sm">
-              <q-btn
-                flat
-                unelevated
-                class="action-btn full-width"
-                :class="{ 'blurred-content': !child.has_active_subscription }"
-                @click="viewAttendance(child)"
-                size="lg"
-              >
-                <q-icon name="checklist" color="primary" size="24px" class="q-mr-sm" />
-                <div class="col text-left">
-                  <div class="text-body1 text-weight-medium">View Attendance</div>
-                  <div class="text-caption text-grey-7">View attendance records</div>
-                </div>
-                <q-icon name="chevron_right" color="grey-6" />
-              </q-btn>
-
-              <q-btn
-                flat
-                unelevated
-                class="action-btn full-width"
-                :class="{ 'blurred-content': !child.has_active_subscription }"
-                @click="viewResults(child)"
-                size="lg"
-              >
-                <q-icon name="assessment" color="primary" size="24px" class="q-mr-sm" />
-                <div class="col text-left">
-                  <div class="text-body1 text-weight-medium">View Results</div>
-                  <div class="text-caption text-grey-7">Exam and assessment results</div>
-                </div>
-                <q-icon name="chevron_right" color="grey-6" />
-              </q-btn>
-
-              <q-btn
-                flat
-                unelevated
-                class="action-btn full-width"
-                :class="{ 'blurred-content': !child.has_active_subscription }"
-                @click="viewReportCards(child)"
-                size="lg"
-              >
-                <q-icon name="description" color="primary" size="24px" class="q-mr-sm" />
-                <div class="col text-left">
-                  <div class="text-body1 text-weight-medium">View Report Cards</div>
-                  <div class="text-caption text-grey-7">Term report cards</div>
-                </div>
-                <q-icon name="chevron_right" color="grey-6" />
-              </q-btn>
-
-              <q-btn
-                flat
-                unelevated
-                class="action-btn full-width"
-                :class="{ 'blurred-content': !child.has_active_subscription }"
-                @click="viewAssessments(child)"
-                size="lg"
-              >
-                <q-icon name="quiz" color="primary" size="24px" class="q-mr-sm" />
-                <div class="col text-left">
-                  <div class="text-body1 text-weight-medium">View Assessments</div>
-                  <div class="text-caption text-grey-7">All assessments and exams</div>
-                </div>
-                <q-icon name="chevron_right" color="grey-6" />
-              </q-btn>
-
-              <q-separator class="q-my-md" />
-
-              <q-btn
-                flat
-                unelevated
-                class="action-btn full-width"
-                color="negative"
-                @click="confirmUnlinkChild(child)"
-                size="lg"
-              >
-                <q-icon name="link_off" color="negative" size="24px" class="q-mr-sm" />
-                <div class="col text-left">
-                  <div class="text-body1 text-weight-medium">Unlink Child</div>
-                  <div class="text-caption text-grey-7">Remove this child from your account</div>
-                </div>
-                <q-icon name="chevron_right" color="grey-6" />
-              </q-btn>
+          <!-- Subscribe Button -->
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            :color="child.has_active_subscription ? 'positive' : 'warning'"
+            @click="subscribeToTerm(child)"
+            size="lg"
+          >
+            <q-icon 
+              :name="child.has_active_subscription ? 'check_circle' : 'card_membership'" 
+              :color="child.has_active_subscription ? 'positive' : 'warning'" 
+              size="24px" 
+              class="q-mr-sm" 
+            />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">
+                {{ child.has_active_subscription ? 'Manage Subscription' : 'Subscribe' }}
+              </div>
+              <div class="text-caption text-grey-7">
+                {{ child.has_active_subscription ? 'View or renew subscription' : 'Subscribe to view academic records' }}
+              </div>
             </div>
-          </q-card-section>
-        </q-card>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
         </div>
 
-      <div v-if="!loading && !child" class="empty-state text-center q-pa-xl">
-        <q-icon name="error_outline" size="64px" color="grey-5" class="q-mb-md" />
-        <div class="text-h6 text-grey-7 q-mb-sm">Child Not Found</div>
-        <div class="text-body2 text-grey-6">
-          The child you're looking for doesn't exist or you don't have access to view it.
+        <!-- Subscription Banner -->
+        <q-banner
+          v-if="!child.has_active_subscription"
+          dense
+          rounded
+          class="subscription-banner bg-info text-white q-mt-md"
+        >
+          <template v-slot:avatar>
+            <q-icon name="info" color="white" />
+          </template>
+          <div class="text-body2">
+            Subscribe to unlock full access to your child's academic records, attendance, results, and report cards.
+          </div>
+        </q-banner>
+      </MobileCard>
+
+      <!-- Quick Actions Card -->
+      <MobileCard variant="default" padding="md">
+        <div class="card-title">Quick Actions</div>
+        <div class="action-buttons">
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            :class="{ 'blurred-content': !child.has_active_subscription }"
+            @click="viewAttendance(child)"
+            size="lg"
+          >
+            <q-icon name="checklist" color="primary" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">View Attendance</div>
+              <div class="text-caption text-grey-7">View attendance records</div>
+            </div>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
+
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            :class="{ 'blurred-content': !child.has_active_subscription }"
+            @click="viewResults(child)"
+            size="lg"
+          >
+            <q-icon name="assessment" color="primary" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">View Results</div>
+              <div class="text-caption text-grey-7">Exam and assessment results</div>
+            </div>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
+
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            :class="{ 'blurred-content': !child.has_active_subscription }"
+            @click="viewReportCards(child)"
+            size="lg"
+          >
+            <q-icon name="description" color="primary" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">View Report Cards</div>
+              <div class="text-caption text-grey-7">Term report cards</div>
+            </div>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
+
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            :class="{ 'blurred-content': !child.has_active_subscription }"
+            @click="viewAssessments(child)"
+            size="lg"
+          >
+            <q-icon name="quiz" color="primary" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">View Assessments</div>
+              <div class="text-caption text-grey-7">All assessments and exams</div>
+            </div>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
+
+          <q-separator class="q-my-md" />
+
+          <q-btn
+            flat
+            unelevated
+            class="action-btn full-width"
+            color="negative"
+            @click="confirmUnlinkChild(child)"
+            size="lg"
+          >
+            <q-icon name="link_off" color="negative" size="24px" class="q-mr-sm" />
+            <div class="col text-left">
+              <div class="text-body1 text-weight-medium">Unlink Child</div>
+              <div class="text-caption text-grey-7">Remove this child from your account</div>
+            </div>
+            <q-icon name="chevron_right" color="grey-6" />
+          </q-btn>
         </div>
-        <q-btn
-          color="primary"
-          label="Back to My Children"
-          icon="arrow_back"
-          unelevated
-          size="lg"
-          @click="router.push('/app/parent/children')"
-          class="q-mt-md"
-        />
+      </MobileCard>
+    </div>
+
+    <div v-if="!loading && !child" class="empty-state">
+      <q-icon name="error_outline" size="64px" color="grey-5" />
+      <div class="empty-text">Child Not Found</div>
+      <div class="empty-subtext">
+        The child you're looking for doesn't exist or you don't have access to view it.
       </div>
+      <q-btn
+        color="primary"
+        label="Back to My Children"
+        icon="arrow_back"
+        unelevated
+        size="lg"
+        @click="router.push('/app/parent/children')"
+        class="q-mt-md"
+      />
     </div>
   </q-page>
 </template>
@@ -289,6 +254,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -486,74 +453,178 @@ async function unlinkChild(child) {
 </script>
 
 <style lang="scss" scoped>
-.parent-page {
-  background: #f5f5f5;
-  min-height: 100vh;
+.child-detail-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
 }
 
-.parent-header {
-  background: white;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
-.parent-content {
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
   max-width: 1200px;
   margin: 0 auto;
 }
 
-.info-card,
-.actions-card {
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: white;
+.info-card {
+  // Specific styling if needed
 }
 
-.info-item {
-  padding: 4px 0;
+.child-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border-light);
 }
 
-.action-btn {
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 8px;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+.child-avatar {
+  flex-shrink: 0;
+}
 
-  &:active {
-    transform: scale(0.98);
-    background: #f5f5f5;
+.child-info {
+  flex: 1;
+}
+
+.child-name {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.child-id {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
+.info-item {
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+.info-label {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-bottom: var(--spacing-xs);
+}
+
+.info-value {
+  font-size: var(--font-size-base);
+  color: var(--text-primary);
+}
+
+.card-title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.class-info {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.class-name {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.class-year {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.empty-text {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--spacing-md);
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.action-btn {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  transition: all var(--transition-base);
+  min-height: 64px;
+  
+  &:active {
+    transform: scale(0.98);
+    background: var(--bg-secondary);
+  }
+  
+  @media (min-width: 768px) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+  }
+}
+
+.subscription-banner {
+  margin-top: var(--spacing-md);
+}
+
 .empty-state {
-  background: white;
-  border-radius: 16px;
-  margin: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+.empty-text {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: var(--spacing-md);
+}
+
+.empty-subtext {
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
 }
 
 .blurred-content {
   filter: blur(5px);
   pointer-events: none;
-}
-
-// Mobile optimizations
-@media (max-width: 600px) {
-  .parent-header {
-    padding: 12px 16px;
-  }
-
-  .parent-content {
-    padding: 12px;
-  }
-
-  .action-btn {
-    padding: 14px;
-  }
+  user-select: none;
 }
 </style>
 

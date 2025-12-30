@@ -1,107 +1,102 @@
 <template>
-  <q-page class="q-pa-lg">
-    <div class="row items-center q-mb-lg">
-      <q-btn
-        flat
-        icon="arrow_back"
-        label="Back"
-        @click="router.back()"
-        class="q-mr-md"
-      />
-      <div>
-        <div class="text-h5 text-weight-bold">Edit Teacher</div>
-        <div class="text-body2 text-grey-7">Update teacher information</div>
-      </div>
+  <q-page class="form-page">
+    <MobilePageHeader
+      title="Edit Teacher"
+      subtitle="Update teacher information"
+      :show-back="true"
+      @back="router.back()"
+    />
+
+    <div v-if="loading" class="detail-loading">
+      <MobileCard variant="default" padding="md">
+        <q-skeleton type="rect" height="200px" class="q-mb-md" />
+        <q-skeleton type="text" width="60%" />
+        <q-skeleton type="text" width="40%" />
+      </MobileCard>
     </div>
 
-    <div v-if="loading" class="row justify-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
-
-    <q-card v-else class="widget-card q-pa-md">
-      <q-card-section>
-        <q-form @submit="updateTeacher" class="q-gutter-md">
-          <div class="row q-col-gutter-md">
-            <!-- Left Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Basic Information</div>
-              
-              <div class="row q-col-gutter-sm">
-                <q-input
-                  v-model="teacherForm.first_name"
-                  label="First Name *"
-                  outlined
-                  class="col"
-                  :rules="[val => !!val || 'First name is required']"
-                  :disable="saving"
-                />
-                <q-input
-                  v-model="teacherForm.last_name"
-                  label="Last Name *"
-                  outlined
-                  class="col"
-                  :rules="[val => !!val || 'Last name is required']"
-                  :disable="saving"
-                />
-              </div>
-
+    <div v-else class="form-content">
+      <MobileCard variant="default" padding="md">
+        <q-form @submit="updateTeacher" class="form">
+          <div class="form-section">
+            <div class="section-title">Basic Information</div>
+            
+            <div class="form-grid">
               <q-input
-                v-model="teacherForm.email"
-                label="Email *"
+                v-model="teacherForm.first_name"
+                label="First Name *"
                 outlined
-                type="email"
-                :rules="[
-                  val => !!val || 'Email is required',
-                  val => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Please enter a valid email'
-                ]"
+                :rules="[val => !!val || 'First name is required']"
                 :disable="saving"
               />
-
               <q-input
-                v-model="teacherForm.staff_number"
-                label="Staff Number"
+                v-model="teacherForm.last_name"
+                label="Last Name *"
                 outlined
-                hint="Unique identifier for the teacher"
+                :rules="[val => !!val || 'Last name is required']"
                 :disable="saving"
               />
             </div>
 
-            <!-- Right Column -->
-            <div class="col-12 col-md-6">
-              <div class="text-subtitle2 q-mb-sm">Professional Information</div>
+            <q-input
+              v-model="teacherForm.email"
+              label="Email *"
+              outlined
+              type="email"
+              :rules="[
+                val => !!val || 'Email is required',
+                val => !val || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || 'Please enter a valid email'
+              ]"
+              :disable="saving"
+              class="q-mb-md"
+            />
 
-              <q-input
-                v-model="teacherForm.qualification"
-                label="Qualification"
-                outlined
-                hint="e.g., B.Ed, M.Ed, PhD"
-                :disable="saving"
-              />
-
-              <q-input
-                v-model="teacherForm.specialization"
-                label="Specialization"
-                outlined
-                hint="e.g., Mathematics, Science, English"
-                :disable="saving"
-              />
-
-              <q-input
-                v-model="teacherForm.hire_date"
-                label="Hire Date"
-                outlined
-                type="date"
-                :disable="saving"
-              />
-            </div>
+            <q-input
+              v-model="teacherForm.staff_number"
+              label="Staff Number"
+              outlined
+              hint="Unique identifier for the teacher"
+              :disable="saving"
+            />
           </div>
 
-          <q-card-actions align="right" class="q-pt-md">
+          <div class="form-section">
+            <div class="section-title">Professional Information</div>
+
+            <q-input
+              v-model="teacherForm.qualification"
+              label="Qualification"
+              outlined
+              hint="e.g., B.Ed, M.Ed, PhD"
+              :disable="saving"
+              class="q-mb-md"
+            />
+
+            <q-input
+              v-model="teacherForm.specialization"
+              label="Specialization"
+              outlined
+              hint="e.g., Mathematics, Science, English"
+              :disable="saving"
+              class="q-mb-md"
+            />
+
+            <q-input
+              v-model="teacherForm.hire_date"
+              label="Hire Date"
+              outlined
+              type="date"
+              :disable="saving"
+            />
+          </div>
+
+          <div class="form-actions">
             <q-btn
               flat
               label="Cancel"
               @click="router.back()"
               :disable="saving"
+              class="q-mr-sm"
             />
             <q-btn
               color="primary"
@@ -110,10 +105,10 @@
               :loading="saving"
               icon="save"
             />
-          </q-card-actions>
+          </div>
         </q-form>
-      </q-card-section>
-    </q-card>
+      </MobileCard>
+    </div>
   </q-page>
 </template>
 
@@ -121,6 +116,8 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import MobilePageHeader from 'src/components/mobile/MobilePageHeader.vue';
+import MobileCard from 'src/components/mobile/MobileCard.vue';
 import api from 'src/services/api';
 
 const route = useRoute();
@@ -207,11 +204,59 @@ async function updateTeacher() {
 </script>
 
 <style lang="scss" scoped>
-.widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+.form-page {
+  padding: var(--spacing-md);
+  
+  @media (min-width: 768px) {
+    padding: var(--spacing-lg);
+  }
+}
+
+.detail-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.form-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md);
+  
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border-light);
 }
 </style>
 
