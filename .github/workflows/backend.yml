@@ -1,0 +1,104 @@
+name: Deploy Laravel API to Shared Hosting
+
+# This workflow deploys Laravel 11 API to shared hosting via SFTP
+# It separates Laravel core files (/backend) from public files (/public_html)
+# No SSH access required - uses SFTP only
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger from GitHub Actions UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Setup PHP 8.2 with required extensions
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip, gd, bcmath, intl, mysql, pdo_mysql
+          coverage: none
+      
+      # Step 3: Install Composer dependencies (production only)
+      - name: Install Composer dependencies
+        run: |
+          cd backend
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+      
+      # Step 4: Deploy Laravel core files to /backend directory
+      # This includes app/, config/, database/, routes/, storage/, vendor/, etc.
+      - name: Deploy Laravel core files to /backend
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: sftp # Use SFTP for secure file transfer
+          port: ${{ secrets.FTP_PORT || 22 }} # SFTP default port is 22
+          local-dir: ./backend/
+          server-dir: /public_html/sms
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/.env*
+            **/tests/**
+            **/.phpunit.cache
+            **/.phpunit.result.cache
+            **/.github/**
+            **/storage/logs/*
+            **/storage/framework/cache/data/*
+            **/storage/framework/sessions/*
+            **/storage/framework/views/*
+            **/storage/framework/testing/**
+            **/.idea/**
+            **/.vscode/**
+            **/phpunit.xml
+            **/Homestead.json
+            **/Homestead.yaml
+            **/auth.json
+            **/package.json
+            **/package-lock.json
+            **/vite.config.js
+            **/postman/**
+            **/public/**
+      
+      # Step 5: Deploy public folder to /public_html directory
+      # This is the web-accessible directory containing index.php and assets
+      - name: Deploy public folder to /public_html/sms
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: sftp # Use SFTP for secure file transfer
+          port: ${{ secrets.FTP_PORT || 22 }} # SFTP default port is 22
+          local-dir: ./backend/public/
+          server-dir: /public_html/sms
+          exclude: |
+            **/.git*
+            **/.git*/**
+            # Note: .htaccess should be included for Laravel routing
+      
+      # Step 6: Deployment summary and reminders
+      - name: Deployment summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo ""
+          echo "📦 Laravel core files deployed to: /backend/"
+          echo "🌐 Public files deployed to: /public_html/"
+          echo ""
+          echo "⚠️  Important post-deployment steps:"
+          echo "   1. Ensure your .env file exists in /backend/ on the server"
+          echo "   2. Update public/index.php if needed to point to correct paths"
+          echo "   3. Set correct file permissions: chmod -R 775 /backend/storage /backend/bootstrap/cache"
+          echo "   4. If you have SSH access, run: php artisan config:cache && php artisan route:cache"
+
