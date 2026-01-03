@@ -30,9 +30,9 @@ export const notificationService = {
   /**
    * Get announcement notifications
    */
-  async getAnnouncements() {
+  async getAnnouncements(params = {}) {
     try {
-      const response = await api.get('/notifications/announcements');
+      const response = await api.get('/notifications/announcements', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching announcements:', error);

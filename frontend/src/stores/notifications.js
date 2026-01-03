@@ -41,9 +41,9 @@ export const useNotificationStore = defineStore('notifications', {
       }
     },
 
-    async fetchAnnouncements() {
+    async fetchAnnouncements(params = {}) {
       try {
-        const response = await notificationService.getAnnouncements();
+        const response = await notificationService.getAnnouncements(params);
         if (response.success) {
           this.announcements = response.data || [];
         }

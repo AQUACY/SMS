@@ -73,7 +73,7 @@ class PaymentReceiptMail extends Mailable implements ShouldQueue
      */
     private function generateReceiptPdf()
     {
-        $payment = $this->payment->load(['student', 'term', 'parent.user']);
+        $payment = $this->payment->load(['student.school', 'term.academicYear', 'parent.user']);
         
         // Get school information
         $school = $payment->student->school ?? null;

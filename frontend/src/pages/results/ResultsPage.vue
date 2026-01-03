@@ -144,7 +144,7 @@
               :key="result.id"
               :title="result.student?.full_name || getStudentName(result.student)"
               :subtitle="result.assessment?.name || 'N/A'"
-              :description="`${result.assessment?.class_subject?.subject?.name || ''} - ${result.assessment?.class_subject?.class?.name || ''}`"
+              :description="getAssessmentDetails(result)"
               icon="assignment"
               :badge="result.grade || '-'"
               :badge-color="result.grade ? getGradeColor(result.grade) : 'grey'"
@@ -167,15 +167,24 @@
 
         <!-- Desktop View: Table -->
         <div class="desktop-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="results.length === 0" class="empty-state">
+            <q-icon name="assignment" size="64px" color="grey-5" />
+            <div class="empty-text">No Results Found</div>
+            <div class="empty-subtext">No results found for the selected filters.</div>
+          </div>
           <q-table
-          :rows="results"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="pagination"
-          @request="onRequest"
-          flat
-        >
+            v-else
+            :rows="results"
+            :columns="columns"
+            row-key="id"
+            :loading="false"
+            :pagination="pagination"
+            @request="onRequest"
+            flat
+          >
           <template v-slot:body-cell-student="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.student?.full_name || getStudentName(props.row.student) }}</div>
@@ -187,8 +196,7 @@
             <q-td :props="props">
               <div class="text-body2">{{ props.row.assessment?.name || 'N/A' }}</div>
               <div class="text-caption text-grey-7">
-                {{ props.row.assessment?.class_subject?.subject?.name || '' }} - 
-                {{ props.row.assessment?.class_subject?.class?.name || '' }}
+                {{ getAssessmentDetails(props.row) }}
               </div>
             </q-td>
           </template>
@@ -369,8 +377,17 @@ async function fetchResults() {
 
     const response = await api.get('/results', { params });
     if (response.data.success) {
-      results.value = response.data.data || [];
-      pagination.value.rowsNumber = response.data.meta?.total || 0;
+      // Results API returns paginated response: { success: true, data: [...], meta: {...} }
+      if (response.data.data && Array.isArray(response.data.data)) {
+        results.value = response.data.data;
+        pagination.value.rowsNumber = response.data.meta?.total || response.data.data.length;
+      } else {
+        results.value = [];
+        pagination.value.rowsNumber = 0;
+      }
+    } else {
+      results.value = [];
+      pagination.value.rowsNumber = 0;
     }
   } catch (error) {
     console.error('Failed to fetch results:', error);
@@ -411,6 +428,24 @@ function getStudentName(student) {
 function calculatePercentage(obtained, total) {
   if (!obtained || !total) return '0';
   return ((obtained / total) * 100).toFixed(1);
+}
+
+function getAssessmentDetails(result) {
+  if (!result?.assessment) return '';
+  
+  const assessment = result.assessment;
+  const subject = assessment.class_subject?.subject?.name || assessment.subject?.name || '';
+  const className = assessment.class_subject?.class?.name || assessment.class?.name || '';
+  
+  if (subject && className) {
+    return `${subject} - ${className}`;
+  } else if (subject) {
+    return subject;
+  } else if (className) {
+    return className;
+  }
+  
+  return '';
 }
 
 function getGradeColor(grade) {

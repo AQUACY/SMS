@@ -32,6 +32,10 @@ class NotificationController extends BaseApiController
             $query->where('is_read', $request->boolean('is_read'));
         }
 
+        if ($request->has('is_announcement')) {
+            $query->where('is_announcement', $request->boolean('is_announcement'));
+        }
+
         $notifications = $query->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
@@ -82,13 +86,19 @@ class NotificationController extends BaseApiController
 
     /**
      * Get unread announcement notifications (prominent display)
+     * If include_read=true, returns all announcements (read and unread)
      */
     public function announcements(Request $request): JsonResponse
     {
-        $notifications = Notification::where('user_id', auth()->id())
-            ->where('is_announcement', true)
-            ->where('is_read', false)
-            ->orderBy('priority', 'desc')
+        $query = Notification::where('user_id', auth()->id())
+            ->where('is_announcement', true);
+        
+        // If include_read is not true, only get unread announcements
+        if (!$request->boolean('include_read')) {
+            $query->where('is_read', false);
+        }
+        
+        $notifications = $query->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
 

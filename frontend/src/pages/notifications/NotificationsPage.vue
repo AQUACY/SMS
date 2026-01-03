@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useNotificationStore } from 'src/stores/notifications';
 import { useAuthStore } from 'src/stores/auth';
 import NotificationList from 'src/components/notifications/NotificationList.vue';
@@ -96,8 +96,25 @@ async function markAllAsRead() {
 }
 
 onMounted(() => {
+  // Fetch all notifications (read and unread) for the "All" tab
+  // Don't pass is_read parameter to get all notifications
   notificationStore.fetchNotifications();
-  notificationStore.fetchAnnouncements();
+  // Fetch all announcements (read and unread) for the "Announcements" tab
+  notificationStore.fetchAnnouncements({ include_read: true });
+});
+
+// Watch for tab changes to refresh data
+watch(activeTab, (newTab) => {
+  if (newTab === 'all') {
+    // Fetch all notifications (read and unread) - don't pass is_read parameter
+    notificationStore.fetchNotifications();
+  } else if (newTab === 'unread') {
+    // Fetch only unread notifications
+    notificationStore.fetchNotifications({ is_read: false });
+  } else if (newTab === 'announcements') {
+    // Fetch all announcements (read and unread)
+    notificationStore.fetchAnnouncements({ include_read: true });
+  }
 });
 </script>
 

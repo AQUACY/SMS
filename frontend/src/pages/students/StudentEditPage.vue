@@ -128,7 +128,6 @@
                 :false-value="false"
                 :disable="saving"
               />
-            </div>
           </div>
 
           <q-separator class="q-my-md" />
@@ -162,6 +161,7 @@
           </div>
           <div v-else class="text-body2 text-grey-7 q-mb-md">
             No guardians linked. You can add guardians from the student detail page.
+          </div>
           </div>
 
           <div class="form-actions">

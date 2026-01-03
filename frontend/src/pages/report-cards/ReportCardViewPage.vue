@@ -82,7 +82,7 @@
       </div>
 
       <!-- Results and Statistics -->
-      <div class="col-12">
+      <div class="col-12 q-mt-md">
         <!-- Summary Statistics -->
         <MobileCard variant="default" padding="md" class="q-mb-md">
           <div class="card-title">Summary</div>

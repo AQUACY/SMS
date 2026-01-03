@@ -176,6 +176,7 @@
               />
             </div>
           </div>
+          </div>
 
           <div class="form-actions">
             <q-btn

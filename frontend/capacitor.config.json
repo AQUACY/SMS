@@ -1,0 +1,8 @@
+{
+  "appId": "com.sms.app",
+  "appName": "School Management System",
+  "webDir": "dist/spa",
+  "server": {
+    "androidScheme": "https"
+  }
+}

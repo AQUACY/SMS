@@ -14,6 +14,11 @@
         </div>
       </div>
 
+      <!-- Noticeboard Card (First Card) - Always visible for all users -->
+      <div class="noticeboard-wrapper">
+        <NoticeboardCard />
+      </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="loading-skeleton">
         <div class="skeleton-card" v-for="i in 3" :key="i">
@@ -81,6 +86,7 @@ import SchoolAdminDashboard from 'src/components/dashboard/SchoolAdminDashboard.
 import AccountsManagerDashboard from 'src/components/dashboard/AccountsManagerDashboard.vue';
 import TeacherDashboard from 'src/components/dashboard/TeacherDashboard.vue';
 import ParentDashboard from 'src/components/dashboard/ParentDashboard.vue';
+import NoticeboardCard from 'src/components/dashboard/NoticeboardCard.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -553,6 +559,11 @@ onMounted(() => {
   font-size: var(--font-size-xs);
   color: var(--text-tertiary);
   margin-top: var(--spacing-xs);
+}
+
+.noticeboard-wrapper {
+  margin-bottom: var(--spacing-lg);
+  width: 100%;
 }
 
 .role-content {

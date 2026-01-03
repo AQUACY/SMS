@@ -12,13 +12,14 @@
         
         body {
             font-family: 'Courier New', monospace;
-            font-size: 10px;
-            line-height: 1.3;
+            font-size: 8px;
+            line-height: 1.15;
             color: #000;
             width: 80mm;
             max-width: 80mm;
-            padding: 5mm;
+            padding: 2mm;
             background: white;
+            margin: 0;
         }
         
         .receipt {
@@ -27,47 +28,51 @@
         
         .header {
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 3px;
             border-bottom: 1px dashed #000;
-            padding-bottom: 8px;
+            padding-bottom: 3px;
         }
         
         .school-name {
-            font-size: 14px;
+            font-size: 11px;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 1px;
             text-transform: uppercase;
+            line-height: 1.2;
         }
         
         .school-address {
-            font-size: 9px;
-            margin-bottom: 2px;
+            font-size: 7px;
+            margin-bottom: 1px;
+            line-height: 1.2;
         }
         
         .school-contact {
-            font-size: 9px;
+            font-size: 7px;
+            line-height: 1.2;
         }
         
         .receipt-title {
             text-align: center;
-            font-size: 12px;
+            font-size: 10px;
             font-weight: bold;
-            margin: 10px 0;
+            margin: 4px 0;
             text-transform: uppercase;
         }
         
         .receipt-info {
-            margin: 8px 0;
+            margin: 3px 0;
             border-top: 1px dashed #000;
             border-bottom: 1px dashed #000;
-            padding: 6px 0;
+            padding: 3px 0;
         }
         
         .info-row {
             display: flex;
             justify-content: space-between;
-            margin: 4px 0;
-            font-size: 9px;
+            margin: 1px 0;
+            font-size: 7px;
+            line-height: 1.2;
         }
         
         .info-label {
@@ -76,63 +81,69 @@
         
         .info-value {
             text-align: right;
+            word-break: break-word;
         }
         
         .payment-details {
-            margin: 8px 0;
+            margin: 3px 0;
         }
         
         .detail-row {
             display: flex;
             justify-content: space-between;
-            margin: 3px 0;
-            font-size: 9px;
+            margin: 1px 0;
+            font-size: 7px;
+            line-height: 1.2;
         }
         
         .detail-label {
             font-weight: bold;
+            flex-shrink: 0;
         }
         
         .detail-value {
             text-align: right;
+            word-break: break-word;
+            margin-left: 4px;
         }
         
         .amount-section {
             text-align: center;
-            margin: 10px 0;
-            padding: 8px 0;
+            margin: 4px 0;
+            padding: 4px 0;
             border-top: 2px solid #000;
             border-bottom: 2px solid #000;
         }
         
         .amount-label {
-            font-size: 9px;
-            margin-bottom: 4px;
+            font-size: 7px;
+            margin-bottom: 2px;
         }
         
         .amount-value {
-            font-size: 18px;
+            font-size: 14px;
             font-weight: bold;
         }
         
         .footer {
             text-align: center;
-            margin-top: 10px;
-            padding-top: 8px;
+            margin-top: 4px;
+            padding-top: 3px;
             border-top: 1px dashed #000;
-            font-size: 8px;
+            font-size: 6px;
+            line-height: 1.2;
         }
         
         .thank-you {
             text-align: center;
-            margin: 10px 0;
-            font-size: 10px;
+            margin: 4px 0;
+            font-size: 8px;
             font-weight: bold;
         }
         
         .divider {
             border-top: 1px dashed #000;
-            margin: 6px 0;
+            margin: 2px 0;
         }
     </style>
 </head>
@@ -189,7 +200,7 @@
             </div>
             <div class="detail-row">
                 <span class="detail-label">Academic Year:</span>
-                <span class="detail-value">{{ $payment->term->academic_year->name ?? 'N/A' }}</span>
+                <span class="detail-value">{{ $payment->term->academicYear->name ?? 'N/A' }}</span>
             </div>
             <div class="divider"></div>
             <div class="detail-row">
@@ -218,8 +229,8 @@
         <!-- Footer -->
         <div class="footer">
             <div>Generated: {{ $generated_at->format('d/m/Y H:i:s') }}</div>
-            <div style="margin-top: 4px;">This is a computer-generated receipt</div>
-            <div style="margin-top: 4px;">Keep this receipt for your records</div>
+            <div style="margin-top: 2px;">This is a computer-generated receipt</div>
+            <div style="margin-top: 2px;">Keep this receipt for your records</div>
         </div>
     </div>
 </body>

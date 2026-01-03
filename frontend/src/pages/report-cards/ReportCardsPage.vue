@@ -152,13 +152,22 @@
 
         <!-- Desktop View: Table -->
         <div class="desktop-only">
+          <div v-if="loading" class="text-center q-pa-xl">
+            <q-spinner color="primary" size="3em" />
+          </div>
+          <div v-else-if="reportCards.length === 0" class="empty-state">
+            <q-icon name="description" size="64px" color="grey-5" />
+            <div class="empty-text">No Report Cards</div>
+            <div class="empty-subtext">Report cards will appear here once results are entered for students.</div>
+          </div>
           <q-table
-          :rows="reportCards"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          flat
-        >
+            v-else
+            :rows="reportCards"
+            :columns="columns"
+            :row-key="(row) => `${row.student_id}-${row.term_id}`"
+            :loading="false"
+            flat
+          >
           <template v-slot:body-cell-student="props">
             <q-td :props="props">
               <div class="text-body2">{{ props.row.student?.full_name || 'N/A' }}</div>
@@ -268,7 +277,11 @@ async function fetchReportCards() {
 
     const response = await api.get('/report-cards', { params });
     if (response.data.success) {
-      let cards = response.data.data || [];
+      // Report Cards API returns direct array: { success: true, data: [...] }
+      let cards = [];
+      if (response.data.data && Array.isArray(response.data.data)) {
+        cards = response.data.data;
+      }
       
       // Apply search filter
       if (searchQuery.value) {
@@ -280,6 +293,8 @@ async function fetchReportCards() {
       }
 
       reportCards.value = cards;
+    } else {
+      reportCards.value = [];
     }
   } catch (error) {
     console.error('Failed to fetch report cards:', error);

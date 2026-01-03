@@ -414,14 +414,14 @@ class PaymentController extends BaseApiController
             $payment->markAsCompleted('accounts_manager');
             
             // Send email notification to admin/accounts managers
-            $payment->load(['parent.user', 'student', 'term']);
+            $payment->load(['parent.user', 'student.school', 'term.academicYear']);
             $this->sendAdminPaymentNotification($payment);
             
             // Send receipt email to parent
             $this->sendParentReceipt($payment);
         }
 
-        $payment->load(['student', 'term', 'parent.user', 'initiatedBy']);
+        $payment->load(['student.school', 'term.academicYear', 'parent.user', 'initiatedBy']);
 
         return $this->success($payment, 'Fee payment initiated successfully', 201);
     }
@@ -513,7 +513,7 @@ class PaymentController extends BaseApiController
                     // Payment verified - mark as completed
                     $payment->markAsCompleted('auto_verification');
                     
-                    $payment->load(['parent.user', 'student', 'term']);
+                    $payment->load(['parent.user', 'student.school', 'term.academicYear']);
                     
                     // Create subscription if it's a subscription payment
                     if ($payment->isSubscriptionPayment()) {
@@ -594,7 +594,7 @@ class PaymentController extends BaseApiController
 
         // Check if payment is already completed
         if ($payment->status === 'completed') {
-            $payment->load(['student', 'term', 'subscription']);
+            $payment->load(['student.school', 'term.academicYear', 'subscription']);
             return $this->success([
                 'payment' => $payment,
                 'message' => 'Payment already verified. Your subscription is active.',
@@ -724,7 +724,7 @@ class PaymentController extends BaseApiController
             ], 'Payment verified and subscription activated successfully');
         } else {
             // For fee payments, just return success
-            $payment->load(['student', 'term', 'parent.user']);
+            $payment->load(['student.school', 'term.academicYear', 'parent.user']);
             
             // Send email notification to admin/accounts managers
             $this->sendAdminPaymentNotification($payment);
@@ -961,7 +961,7 @@ class PaymentController extends BaseApiController
         }
 
         try {
-            $payment->load(['parent.user', 'student', 'term']);
+            $payment->load(['parent.user', 'student.school', 'term.academicYear']);
             $schoolId = $payment->student->school_id ?? $payment->parent->user->school_id ?? null;
 
             if (!$schoolId) {
@@ -999,7 +999,7 @@ class PaymentController extends BaseApiController
         }
 
         try {
-            $payment->load(['parent.user', 'student', 'term']);
+            $payment->load(['parent.user', 'student.school', 'term.academicYear']);
             
             if (!$payment->parent || !$payment->parent->user || !$payment->parent->user->email) {
                 return;
@@ -1036,7 +1036,7 @@ class PaymentController extends BaseApiController
             return response('Receipt can only be generated for completed payments', 422);
         }
 
-        $payment->load(['student', 'term', 'parent.user']);
+        $payment->load(['student.school', 'term.academicYear', 'parent.user']);
         
         // Get school information
         $school = $payment->student->school ?? null;
