@@ -45,7 +45,7 @@ jobs:
           # Alternative protocols if FTPS doesn't work: "ftp" or "ftps-legacy"
           port: ${{ secrets.FTP_PORT || 21 }} # FTPS default port is 21 (or 990 for explicit FTPS)
           local-dir: ./backend/
-          server-dir: /public_html/sms/
+          server-dir: /public_html/sms/backend/
           exclude: |
             **/.git*
             **/.git*/**
