@@ -45,7 +45,7 @@ jobs:
           # Alternative protocols if FTPS doesn't work: "ftp" or "ftps-legacy"
           port: ${{ secrets.FTP_PORT || 21 }} # FTPS default port is 21 (or 990 for explicit FTPS)
           local-dir: ./backend/
-          server-dir: /public_html/sms
+          server-dir: /public_html/sms/
           exclude: |
             **/.git*
             **/.git*/**
@@ -74,7 +74,7 @@ jobs:
       
       # Step 5: Deploy public folder to /public_html directory
       # This is the web-accessible directory containing index.php and assets
-      - name: Deploy public folder to /public_html/sms
+      - name: Deploy public folder to /public_html/sms/
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -84,7 +84,7 @@ jobs:
           # Alternative protocols if FTPS doesn't work: "ftp" or "ftps-legacy"
           port: ${{ secrets.FTP_PORT || 21 }} # FTPS default port is 21 (or 990 for explicit FTPS)
           local-dir: ./backend/public/
-          server-dir: /public_html/sms
+          server-dir: /public_html/sms/
           exclude: |
             **/.git*
             **/.git*/**
