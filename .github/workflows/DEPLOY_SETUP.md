@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `deploy.yml` workflow automatically deploys your Laravel 11 API to shared hosting via SFTP when code is pushed to the `main` branch.
+The `backend.yml` workflow automatically deploys your Laravel 11 API to shared hosting via FTPS when code is pushed to the `main` branch.
 
 ## How It Works
 
@@ -21,10 +21,10 @@ Configure these secrets in your GitHub repository:
 
 | Secret Name | Description | Example |
 |------------|-------------|---------|
-| `FTP_SERVER` | Your SFTP server hostname | `ftp.yourdomain.com` or `yourdomain.com` |
-| `FTP_USERNAME` | SFTP username | `your_ftp_username` |
-| `FTP_PASSWORD` | SFTP password | `your_secure_password` |
-| `FTP_PORT` | SFTP port (optional, defaults to 22) | `22` |
+| `FTP_SERVER` | Your FTP/FTPS server hostname | `ftp.yourdomain.com` or `yourdomain.com` |
+| `FTP_USERNAME` | FTP username | `your_ftp_username` |
+| `FTP_PASSWORD` | FTP password | `your_secure_password` |
+| `FTP_PORT` | FTP port (optional, defaults to 21) | `21` for FTP/FTPS, `990` for explicit FTPS |
 
 ## Server Directory Structure
 
@@ -113,14 +113,18 @@ You can manually trigger the deployment:
 ## Troubleshooting
 
 ### Connection Failed
-- Verify SFTP credentials are correct
-- Check if SFTP is enabled on your hosting
-- Verify the port (usually 22 for SFTP)
+- Verify FTP/FTPS credentials are correct
+- Check if FTPS is enabled on your hosting (try `ftp` protocol if FTPS doesn't work)
+- Verify the port:
+  - Port `21` for FTP/FTPS (implicit)
+  - Port `990` for explicit FTPS
+  - If FTPS doesn't work, try changing protocol to `ftp` in the workflow
 
 ### Files Not Deploying
 - Check server directory paths exist
-- Verify SFTP user has write permissions
+- Verify FTP user has write permissions
 - Check GitHub Actions logs for specific errors
+- If FTPS fails, try changing `protocol: ftps` to `protocol: ftp` in the workflow
 
 ### 500 Error After Deployment
 - Verify `.env` file exists and is configured
@@ -140,8 +144,8 @@ The workflow automatically excludes:
 
 ## Notes
 
-- **No SSH required**: This workflow uses SFTP only, perfect for shared hosting
+- **No SSH required**: This workflow uses FTPS (FTP over SSL/TLS) only, perfect for shared hosting
 - **Separate deployments**: Core files and public files are deployed separately
 - **Production ready**: Uses `--no-dev` for Composer, excludes test files
-- **Secure**: Uses SFTP protocol for encrypted file transfer
+- **Secure**: Uses FTPS protocol for encrypted file transfer (fallback to `ftp` if FTPS not supported)
 

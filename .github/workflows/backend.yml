@@ -1,8 +1,8 @@
 name: Deploy Laravel API to Shared Hosting
 
-# This workflow deploys Laravel 11 API to shared hosting via SFTP
+# This workflow deploys Laravel 11 API to shared hosting via FTPS
 # It separates Laravel core files (/backend) from public files (/public_html)
-# No SSH access required - uses SFTP only
+# No SSH access required - uses FTPS (FTP over SSL/TLS) for secure transfer
 
 on:
   push:
@@ -41,8 +41,9 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp # Use SFTP for secure file transfer
-          port: ${{ secrets.FTP_PORT || 22 }} # SFTP default port is 22
+          protocol: ftps # Use FTPS (FTP over SSL/TLS) for secure file transfer
+          # Alternative protocols if FTPS doesn't work: "ftp" or "ftps-legacy"
+          port: ${{ secrets.FTP_PORT || 21 }} # FTPS default port is 21 (or 990 for explicit FTPS)
           local-dir: ./backend/
           server-dir: /public_html/sms
           exclude: |
@@ -79,8 +80,9 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp # Use SFTP for secure file transfer
-          port: ${{ secrets.FTP_PORT || 22 }} # SFTP default port is 22
+          protocol: ftps # Use FTPS (FTP over SSL/TLS) for secure file transfer
+          # Alternative protocols if FTPS doesn't work: "ftp" or "ftps-legacy"
+          port: ${{ secrets.FTP_PORT || 21 }} # FTPS default port is 21 (or 990 for explicit FTPS)
           local-dir: ./backend/public/
           server-dir: /public_html/sms
           exclude: |
