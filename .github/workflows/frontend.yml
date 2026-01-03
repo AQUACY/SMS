@@ -36,25 +36,8 @@ jobs:
           cd frontend
           npm ci
       
-      # Step 4: Update API URL in .quasar.env.json for production build
-      - name: Configure production API URL
-        run: |
-          cd frontend
-          # Update .quasar.env.json with production API URL from secret or use default
-          API_URL="${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
-          cat > .quasar.env.json << EOF
-          {
-            "dev": {
-              "API_URL": "http://localhost:8000/api"
-            },
-            "production": {
-              "API_URL": "${API_URL}"
-            }
-          }
-          EOF
-          echo "✅ API URL configured: ${API_URL}"
-      
-      # Step 5: Build frontend with production configuration
+      # Step 4: Build frontend with production API URL
+      # The API_URL is injected via rawDefine in quasar.config.js
       - name: Build frontend
         run: |
           cd frontend
@@ -63,8 +46,10 @@ jobs:
           NODE_ENV: production
           QUASAR_MODE: spa
           API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}
+          # Also set as VITE_API_URL as fallback
+          VITE_API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}
       
-      # Step 6: Deploy built files to /public_html
+      # Step 5: Deploy built files to /public_html
       # The Quasar build outputs to dist/spa/ directory
       - name: Deploy frontend to /public_html
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -89,7 +74,7 @@ jobs:
           echo "✅ Frontend deployment completed successfully!"
           echo ""
           echo "🌐 Frontend files deployed to: /public_html/sms/"
-          echo "🔗 API URL configured: ${{ secrets.FRONTEND_API_URL || 'https://api.yourschool.com/api' }}"
+          echo "🔗 API URL configured: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
           echo ""
           echo "⚠️  Important post-deployment steps:"
           echo "   1. Verify the API URL is correct in the deployed files"

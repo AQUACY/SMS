@@ -4,7 +4,7 @@ import { Notify, LocalStorage } from 'quasar';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: process.env.API_URL || 'http://localhost:8000/api',
+  baseURL: process.env.API_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

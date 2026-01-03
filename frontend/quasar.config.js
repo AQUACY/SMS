@@ -60,7 +60,10 @@ module.exports = configure(function (ctx) {
       // publicPath: '/',
       // analyze: true,
       // env: {},
-      // rawDefine: {}
+      rawDefine: {
+        // Inject API_URL from environment variable during build
+        'process.env.API_URL': JSON.stringify(process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:8000/api')
+      },
       // ignorePublicFolder: true,
       // minify: false,
       // polyfillModulePreload: true,
