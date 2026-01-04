@@ -93,6 +93,32 @@ module.exports = configure(function (ctx) {
         // Vite automatically handles import.meta.env.VITE_* variables from .env files
         viteConf.define = viteConf.define || {};
         viteConf.define['import.meta.env.VITE_API_URL'] = JSON.stringify(apiUrl);
+        
+        // CSS configuration for production builds
+        // Ensure fonts and styles are preserved correctly
+        if (!ctx.dev) {
+          viteConf.build = viteConf.build || {};
+          // Keep CSS in single file for better consistency and to avoid loading issues
+          viteConf.build.cssCodeSplit = false;
+          
+          // Ensure font files are properly handled
+          viteConf.build.rollupOptions = viteConf.build.rollupOptions || {};
+          viteConf.build.rollupOptions.output = viteConf.build.rollupOptions.output || {};
+          
+          // Preserve font file structure for proper loading
+          const originalAssetFileNames = viteConf.build.rollupOptions.output.assetFileNames;
+          viteConf.build.rollupOptions.output.assetFileNames = (assetInfo) => {
+            // Preserve font file names for better caching and debugging
+            if (assetInfo.name && /\.(woff2?|eot|ttf|otf)$/i.test(assetInfo.name)) {
+              return 'fonts/[name]-[hash][extname]';
+            }
+            // Use original function if it exists, otherwise use default
+            if (typeof originalAssetFileNames === 'function') {
+              return originalAssetFileNames(assetInfo);
+            }
+            return 'assets/[name]-[hash][extname]';
+          };
+        }
       },
       // viteVuePluginOptions: {},
 

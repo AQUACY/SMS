@@ -122,16 +122,28 @@
 }
 
 // Mobile-First Base Styles
+// Ensure consistent font rendering across all browsers and production builds
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1;
+  font-kerning: normal;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  font-weight: 400;
 }
 
 // Smooth transitions for all interactive elements
-// Note: display property is NOT included in transitions as it cannot be animated
 * {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
   transition-timing-function: var(--transition-fast);
@@ -259,6 +271,22 @@ body {
   color: white !important;
 }
 
+// Ensure consistent typography across all Quasar components
+.q-body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+// Ensure all text elements use consistent font rendering
+h1, h2, h3, h4, h5, h6,
+p, span, div, a, button, input, textarea, select, label {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
 // Card hover effects
 .q-card {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -337,39 +365,4 @@ body {
 
 .pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-// Responsive view utilities - Global classes to ensure proper mobile/desktop switching
-// These must be global (not scoped) to work correctly in production builds
-.mobile-list-view {
-  display: block !important;
-  
-  @media (min-width: 960px) {
-    display: none !important;
-  }
-}
-
-.desktop-table-view {
-  display: none !important;
-  
-  @media (min-width: 960px) {
-    display: block !important;
-  }
-}
-
-// Ensure mobile header shows/hides correctly
-.mobile-header-wrapper {
-  display: block !important;
-  
-  @media (min-width: 768px) {
-    display: none !important;
-  }
-}
-
-.desktop-header-wrapper {
-  display: none !important;
-  
-  @media (min-width: 768px) {
-    display: block !important;
-  }
 }
