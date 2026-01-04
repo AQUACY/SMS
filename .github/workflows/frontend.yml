@@ -36,11 +36,22 @@ jobs:
           cd frontend
           npm ci
       
-      # Step 4: Verify API URL is set
-      - name: Verify API URL environment variable
+      # Step 4: Replace API URL placeholder with production URL
+      - name: Configure API URL
         run: |
-          echo "API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
-          echo "VITE_API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
+          cd frontend/src/config
+          API_URL="${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
+          # Replace placeholder in api.js with actual production URL
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s|__API_URL_PLACEHOLDER__|${API_URL}|g" api.js
+          else
+            # Linux
+            sed -i "s|__API_URL_PLACEHOLDER__|${API_URL}|g" api.js
+          fi
+          echo "✅ Updated API config with URL: ${API_URL}"
+          echo "Verifying replacement:"
+          grep "API_BASE_URL" api.js
       
       # Step 5: Build frontend with production API URL
       # The API_URL is injected via rawDefine and extendViteConf in quasar.config.js
@@ -62,14 +73,24 @@ jobs:
         run: |
           cd frontend/dist/spa
           echo "Checking for API URL in built files..."
+          PROD_URL="${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
+          
+          # Check for localhost (should NOT be found)
           if grep -r "localhost:8000" . 2>/dev/null; then
             echo "⚠️  WARNING: Found localhost:8000 in built files!"
+            echo "This means the API URL replacement didn't work correctly."
             exit 1
           else
-            echo "✅ No localhost found - API URL should be correctly replaced"
+            echo "✅ No localhost found - API URL was correctly replaced"
           fi
-          if grep -r "sms.kdgsolution.com" . 2>/dev/null || grep -r "api.yourschool.com" . 2>/dev/null; then
-            echo "✅ Found production API URL in built files"
+          
+          # Check for production URL (should be found)
+          if grep -r "${PROD_URL}" . 2>/dev/null; then
+            echo "✅ Found production API URL (${PROD_URL}) in built files"
+          else
+            echo "⚠️  WARNING: Production API URL not found in built files"
+            echo "Searching for any API URL patterns..."
+            grep -r "https://" . 2>/dev/null | head -5 || echo "No https URLs found"
           fi
         continue-on-error: true
       

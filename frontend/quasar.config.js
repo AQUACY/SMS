@@ -62,6 +62,7 @@ module.exports = configure(function (ctx) {
       // env: {},
       rawDefine: {
         // Inject API_URL from environment variable during build
+        // This replaces process.env.API_URL in the code
         'process.env.API_URL': JSON.stringify(
           process.env.API_URL || 
           process.env.VITE_API_URL || 
@@ -88,13 +89,18 @@ module.exports = configure(function (ctx) {
         // Debug: Log the API URL being used (only in build mode)
         if (ctx.mode === 'spa' && ctx.dev === false) {
           console.log('🔧 Building with API_URL:', apiUrl);
+          console.log('🔧 API_URL will replace process.env.API_URL in code');
         }
         
         viteConf.define = viteConf.define || {};
+        // Replace process.env.API_URL with the actual URL string
         viteConf.define['process.env.API_URL'] = JSON.stringify(apiUrl);
         
         // Also define it as a global constant for Vite
         viteConf.define['import.meta.env.VITE_API_URL'] = JSON.stringify(apiUrl);
+        
+        // Ensure the replacement happens for the config file too
+        viteConf.define['process.env.VITE_API_URL'] = JSON.stringify(apiUrl);
       },
       // viteVuePluginOptions: {},
 

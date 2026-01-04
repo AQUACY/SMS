@@ -266,7 +266,7 @@ async function fetchReportCard() {
 }
 
 function buildPdfUrl(action) {
-  const baseURL = api.defaults.baseURL || 'http://localhost:8000/api';
+  const baseURL = api.defaults.baseURL;
   const studentId = route.params.studentId;
   const termId = route.params.termId;
   return `${baseURL}/report-cards/pdf?student_id=${studentId}&term_id=${termId}&action=${action}`;

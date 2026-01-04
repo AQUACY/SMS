@@ -1,11 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from 'src/stores/auth';
 import { Notify, LocalStorage } from 'quasar';
+import { API_BASE_URL } from 'src/config/api';
 
 // Create axios instance
 // API_URL is injected at build time via quasar.config.js rawDefine
 const api = axios.create({
-  baseURL: process.env.API_URL || 'http://localhost:8000/api',
+  baseURL: API_BASE_URL,
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
@@ -136,7 +137,7 @@ api.interceptors.response.use(
           
           // Create a temporary axios instance for refresh to bypass interceptor
           const refreshApi = axios.create({
-            baseURL: process.env.API_URL || 'http://localhost:8000/api',
+            baseURL: API_BASE_URL,
             timeout: 30000,
             headers: {
               'Content-Type': 'application/json',

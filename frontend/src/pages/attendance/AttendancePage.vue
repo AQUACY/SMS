@@ -691,7 +691,7 @@ const validatePdfForm = () => {
 };
 
 const buildPdfUrl = (action) => {
-  const baseURL = api.defaults.baseURL || 'http://localhost:8000/api';
+  const baseURL = api.defaults.baseURL;
   const params = new URLSearchParams({
     class_id: pdfForm.value.class_id,
     term_id: pdfForm.value.term_id,

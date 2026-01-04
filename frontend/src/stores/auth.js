@@ -177,8 +177,9 @@ export const useAuthStore = defineStore('auth', {
         try {
           // Use a separate axios instance to avoid interceptor
           const axios = (await import('axios')).default;
+          const { API_BASE_URL } = await import('src/config/api');
           const logoutApi = axios.create({
-            baseURL: process.env.API_URL || 'http://localhost:8000/api',
+            baseURL: API_BASE_URL,
             timeout: 5000,
           });
           
