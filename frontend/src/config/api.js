@@ -1,9 +1,10 @@
 // API Configuration
-// This file is modified during build by GitHub Actions
+// Reads API URL from environment variables
 // 
-// In development: This file uses localhost (default)
-// In production: The placeholder below is replaced with production URL during build
+// In development: Reads from .env file (VITE_API_URL)
+// In production: Reads from .env.production file or build-time environment variable
 
-// The build process will replace __API_URL_PLACEHOLDER__ with the actual URL
-export const API_BASE_URL = '__API_URL_PLACEHOLDER__';
+// Vite exposes environment variables via import.meta.env
+// Variables must be prefixed with VITE_ to be exposed to the client
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 

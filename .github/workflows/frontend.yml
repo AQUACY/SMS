@@ -36,39 +36,21 @@ jobs:
           cd frontend
           npm ci
       
-      # Step 4: Replace API URL placeholder with production URL
-      - name: Configure API URL
-        run: |
-          cd frontend/src/config
-          API_URL="${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
-          # Replace placeholder in api.js with actual production URL
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            sed -i '' "s|__API_URL_PLACEHOLDER__|${API_URL}|g" api.js
-          else
-            # Linux
-            sed -i "s|__API_URL_PLACEHOLDER__|${API_URL}|g" api.js
-          fi
-          echo "✅ Updated API config with URL: ${API_URL}"
-          echo "Verifying replacement:"
-          grep "API_BASE_URL" api.js
-      
-      # Step 5: Build frontend with production API URL
-      # The API_URL is injected via rawDefine and extendViteConf in quasar.config.js
+      # Step 4: Build frontend with production API URL
+      # The API URL is read from VITE_API_URL environment variable
+      # Vite automatically loads .env.production, but env vars take precedence
       - name: Build frontend
         run: |
           cd frontend
-          echo "Building with API_URL: $API_URL"
           echo "Building with VITE_API_URL: $VITE_API_URL"
           npm run build
         env:
           NODE_ENV: production
           QUASAR_MODE: spa
-          API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}
-          # Also set as VITE_API_URL as fallback
+          # VITE_API_URL will be used by Vite to replace import.meta.env.VITE_API_URL
           VITE_API_URL: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}
       
-      # Step 6: Verify API URL in built files
+      # Step 5: Verify API URL in built files
       - name: Verify API URL in build
         run: |
           cd frontend/dist/spa
@@ -94,7 +76,7 @@ jobs:
           fi
         continue-on-error: true
       
-      # Step 7: Deploy built files to /public_html
+      # Step 6: Deploy built files to /public_html
       # The Quasar build outputs to dist/spa/ directory
       - name: Deploy frontend to /public_html
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -113,7 +95,7 @@ jobs:
             **/.DS_Store
             **/Thumbs.db
       
-      # Step 6: Deployment summary
+      # Step 7: Deployment summary
       - name: Deployment summary
         run: |
           echo "✅ Frontend deployment completed successfully!"
