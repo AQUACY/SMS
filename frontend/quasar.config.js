@@ -62,7 +62,11 @@ module.exports = configure(function (ctx) {
       // env: {},
       rawDefine: {
         // Inject API_URL from environment variable during build
-        'process.env.API_URL': JSON.stringify(process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:8000/api')
+        'process.env.API_URL': JSON.stringify(
+          process.env.API_URL || 
+          process.env.VITE_API_URL || 
+          'http://localhost:8000/api'
+        )
       },
       // ignorePublicFolder: true,
       // minify: false,
@@ -77,6 +81,20 @@ module.exports = configure(function (ctx) {
         const path = require('path');
         viteConf.resolve.alias['src'] = path.resolve(__dirname, './src');
         viteConf.resolve.alias['@'] = path.resolve(__dirname, './src');
+        
+        // Define API_URL for Vite build - this ensures it's replaced in the code
+        const apiUrl = process.env.API_URL || process.env.VITE_API_URL || 'http://localhost:8000/api';
+        
+        // Debug: Log the API URL being used (only in build mode)
+        if (ctx.mode === 'spa' && ctx.dev === false) {
+          console.log('🔧 Building with API_URL:', apiUrl);
+        }
+        
+        viteConf.define = viteConf.define || {};
+        viteConf.define['process.env.API_URL'] = JSON.stringify(apiUrl);
+        
+        // Also define it as a global constant for Vite
+        viteConf.define['import.meta.env.VITE_API_URL'] = JSON.stringify(apiUrl);
       },
       // viteVuePluginOptions: {},
 

@@ -3,8 +3,9 @@ import { useAuthStore } from 'src/stores/auth';
 import { Notify, LocalStorage } from 'quasar';
 
 // Create axios instance
+// API_URL is injected at build time via quasar.config.js rawDefine
 const api = axios.create({
-  baseURL: process.env.API_URL,
+  baseURL: process.env.API_URL || 'http://localhost:8000/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
