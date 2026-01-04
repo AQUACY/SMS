@@ -100,12 +100,12 @@ jobs:
         run: |
           echo "✅ Frontend deployment completed successfully!"
           echo ""
-          echo "🌐 Frontend files deployed to: /public_html/sms/"
+          echo "🌐 Frontend files deployed to: /public_html/app/"
           echo "🔗 API URL configured: ${{ secrets.FRONTEND_API_URL || 'https://sms.kdgsolution.com/api' }}"
           echo ""
           echo "⚠️  Important post-deployment steps:"
           echo "   1. Verify the API URL is correct in the deployed files"
-          echo "   2. Ensure your domain points to /public_html/sms/"
+          echo "   2. Ensure your domain points to /public_html/app/"
           echo "   3. Check that .htaccess file exists for Vue Router history mode"
           echo "   4. Test the application in a browser"
 

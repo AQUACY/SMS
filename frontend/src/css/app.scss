@@ -131,6 +131,7 @@ body {
 }
 
 // Smooth transitions for all interactive elements
+// Note: display property is NOT included in transitions as it cannot be animated
 * {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
   transition-timing-function: var(--transition-fast);
@@ -336,4 +337,39 @@ body {
 
 .pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// Responsive view utilities - Global classes to ensure proper mobile/desktop switching
+// These must be global (not scoped) to work correctly in production builds
+.mobile-list-view {
+  display: block !important;
+  
+  @media (min-width: 960px) {
+    display: none !important;
+  }
+}
+
+.desktop-table-view {
+  display: none !important;
+  
+  @media (min-width: 960px) {
+    display: block !important;
+  }
+}
+
+// Ensure mobile header shows/hides correctly
+.mobile-header-wrapper {
+  display: block !important;
+  
+  @media (min-width: 768px) {
+    display: none !important;
+  }
+}
+
+.desktop-header-wrapper {
+  display: none !important;
+  
+  @media (min-width: 768px) {
+    display: block !important;
+  }
 }
