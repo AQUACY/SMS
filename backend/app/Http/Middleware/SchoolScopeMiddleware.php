@@ -89,6 +89,11 @@ class SchoolScopeMiddleware
             if ($request->is('api/dashboard*')) {
                 return $next($request);
             }
+            
+            // Allow notifications endpoint (parents need to see notifications from their children's schools)
+            if ($request->is('api/notifications*')) {
+                return $next($request);
+            }
         }
 
         // Ensure user has a school_id

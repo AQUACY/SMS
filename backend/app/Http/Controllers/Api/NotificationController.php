@@ -19,10 +19,16 @@ class NotificationController extends BaseApiController
     }
     /**
      * Display a listing of notifications
+     * Ensures users only see notifications from their school
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Notification::where('user_id', auth()->id());
+        $user = auth()->user();
+        
+        $query = Notification::where('user_id', $user->id);
+        
+        // Filter by school to ensure users only see notifications from their school
+        $this->filterBySchool($query, $user);
 
         if ($request->has('type')) {
             $query->where('type', $request->get('type'));
@@ -36,7 +42,8 @@ class NotificationController extends BaseApiController
             $query->where('is_announcement', $request->boolean('is_announcement'));
         }
 
-        $notifications = $query->orderBy('created_at', 'desc')
+        $notifications = $query->with(['creator.school:id,name'])
+            ->orderBy('created_at', 'desc')
             ->paginate($request->get('per_page', 15));
 
         return $this->paginated($notifications, 'Notifications retrieved successfully');
@@ -44,11 +51,19 @@ class NotificationController extends BaseApiController
 
     /**
      * Get unread notifications
+     * Ensures users only see notifications from their school
      */
     public function unread(Request $request): JsonResponse
     {
-        $notifications = Notification::where('user_id', auth()->id())
-            ->where('is_read', false)
+        $user = auth()->user();
+        
+        $query = Notification::where('user_id', $user->id)
+            ->where('is_read', false);
+        
+        // Filter by school to ensure users only see notifications from their school
+        $this->filterBySchool($query, $user);
+        
+        $notifications = $query->with(['creator.school:id,name'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -57,10 +72,18 @@ class NotificationController extends BaseApiController
 
     /**
      * Mark notification as read
+     * Ensures users can only mark their own notifications as read
      */
     public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        if ($notification->user_id !== auth()->id()) {
+        $user = auth()->user();
+        
+        if ($notification->user_id !== $user->id) {
+            return $this->error('Notification not found', 404);
+        }
+        
+        // Verify notification is from user's school
+        if (!$this->isNotificationFromUserSchool($notification, $user)) {
             return $this->error('Notification not found', 404);
         }
 
@@ -71,15 +94,22 @@ class NotificationController extends BaseApiController
 
     /**
      * Mark all notifications as read
+     * Ensures users only mark notifications from their school as read
      */
     public function markAllAsRead(Request $request): JsonResponse
     {
-        Notification::where('user_id', auth()->id())
-            ->where('is_read', false)
-            ->update([
-                'is_read' => true,
-                'read_at' => now(),
-            ]);
+        $user = auth()->user();
+        
+        $query = Notification::where('user_id', $user->id)
+            ->where('is_read', false);
+        
+        // Filter by school to ensure users only mark notifications from their school
+        $this->filterBySchool($query, $user);
+        
+        $query->update([
+            'is_read' => true,
+            'read_at' => now(),
+        ]);
 
         return $this->success(null, 'All notifications marked as read');
     }
@@ -87,18 +117,25 @@ class NotificationController extends BaseApiController
     /**
      * Get unread announcement notifications (prominent display)
      * If include_read=true, returns all announcements (read and unread)
+     * Ensures users only see notifications from their school
      */
     public function announcements(Request $request): JsonResponse
     {
-        $query = Notification::where('user_id', auth()->id())
+        $user = auth()->user();
+        
+        $query = Notification::where('user_id', $user->id)
             ->where('is_announcement', true);
+        
+        // Filter by school to ensure users only see notifications from their school
+        $this->filterBySchool($query, $user);
         
         // If include_read is not true, only get unread announcements
         if (!$request->boolean('include_read')) {
             $query->where('is_read', false);
         }
         
-        $notifications = $query->orderBy('priority', 'desc')
+        $notifications = $query->with(['creator.school:id,name'])
+            ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -395,6 +432,81 @@ class NotificationController extends BaseApiController
         return $this->success([
             'deleted_count' => $deletedCount,
         ], 'Notification deleted successfully');
+    }
+
+    /**
+     * Filter notifications by school to ensure users only see notifications from their school
+     * Handles parents with children in multiple schools
+     */
+    private function filterBySchool($query, User $user): void
+    {
+        // Super admins can see all notifications
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        // For users with direct school_id, filter by that school
+        if ($user->school_id) {
+            $query->whereHas('creator', function ($q) use ($user) {
+                $q->where('school_id', $user->school_id);
+            });
+            return;
+        }
+
+        // For parents, get school_ids from their children
+        if ($user->isParent() && $user->parent) {
+            $parent = $user->parent;
+            $students = $parent->students()->with('school')->get();
+            
+            // Get unique school IDs from children
+            $schoolIds = $students->pluck('school_id')->filter()->unique()->values()->toArray();
+            
+            if (!empty($schoolIds)) {
+                // Filter notifications where creator's school matches any of the parent's children's schools
+                $query->whereHas('creator', function ($q) use ($schoolIds) {
+                    $q->whereIn('school_id', $schoolIds);
+                });
+            } else {
+                // If parent has no children with schools, return no notifications
+                $query->whereRaw('1 = 0');
+            }
+            return;
+        }
+
+        // For users without school_id and not parents, return no notifications
+        $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * Check if a notification is from the user's school
+     */
+    private function isNotificationFromUserSchool(Notification $notification, User $user): bool
+    {
+        // Super admins can see all notifications
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // If notification has no creator, allow it (shouldn't happen, but be safe)
+        if (!$notification->creator) {
+            return false;
+        }
+
+        // For users with direct school_id, check if creator's school matches
+        if ($user->school_id) {
+            return $notification->creator->school_id === $user->school_id;
+        }
+
+        // For parents, check if creator's school matches any of their children's schools
+        if ($user->isParent() && $user->parent) {
+            $parent = $user->parent;
+            $students = $parent->students()->with('school')->get();
+            $schoolIds = $students->pluck('school_id')->filter()->unique()->values()->toArray();
+            
+            return in_array($notification->creator->school_id, $schoolIds);
+        }
+
+        return false;
     }
 }
 
