@@ -483,6 +483,12 @@ const routes = [
         meta: { requiresAuth: true, roles: ['super_admin', 'school_admin'] },
       },
       {
+        path: 'settings/school-setup',
+        name: 'school-setup',
+        component: () => import('src/pages/settings/SchoolSetupPage.vue'),
+        meta: { requiresAuth: true, roles: ['school_admin'] },
+      },
+      {
         path: 'settings/grading-scales',
         name: 'grading-scales',
         component: () => import('src/pages/settings/GradingScalesPage.vue'),

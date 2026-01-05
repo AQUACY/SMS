@@ -281,11 +281,12 @@ const menuItems = computed(() => {
     { name: 'assessments', label: 'Assessments', icon: 'edit', path: '/app/assessments' },
     { name: 'results', label: 'Results', icon: 'assessment', path: '/app/results' },
     { name: 'report-cards', label: 'Report Cards', icon: 'description', path: '/app/report-cards' },
-    { name: 'academic-years', label: 'Academic Years', icon: 'calendar_view_year', path: '/app/academic-years' },
+    { name: 'academic-years', label: 'Academic Years', icon: 'calendar_today', path: '/app/academic-years' },
     { name: 'terms', label: 'Terms', icon: 'calendar_today', path: '/app/terms' },
     { name: 'payments', label: 'Fee Payments', icon: 'payment', path: '/app/payments' },
     { name: 'fees', label: 'Fees', icon: 'attach_money', path: '/app/fees' },
     { name: 'users', label: 'Users', icon: 'people_outline', path: '/app/users' },
+    { name: 'school-setup', label: 'School Setup', icon: 'school', path: '/app/settings/school-setup' },
     { name: 'grading-scales', label: 'Grading Scales', icon: 'grade', path: '/app/settings/grading-scales' },
     { name: 'notifications', label: 'Notifications', icon: 'notifications', path: '/app/notifications' },
   ];

@@ -243,15 +243,22 @@ Route::middleware(['auth:api', 'school.scope'])->group(function () {
         Route::get('/export/class-students', [ExcelImportController::class, 'exportClassStudents']);
     });
 
-    // Schools Management (Super Admin only)
-    Route::prefix('schools')->middleware('role:super_admin')->group(function () {
-        Route::get('/', [SchoolController::class, 'index']);
-        Route::post('/', [SchoolController::class, 'store']);
-        Route::get('/{school}', [SchoolController::class, 'show']);
-        Route::put('/{school}', [SchoolController::class, 'update']);
-        Route::delete('/{school}', [SchoolController::class, 'destroy']);
-        Route::get('/{school}/statistics', [SchoolController::class, 'statistics']);
-        Route::post('/{school}/toggle-status', [SchoolController::class, 'toggleStatus']);
+    // Schools Management
+    Route::prefix('schools')->group(function () {
+        // Super Admin only routes
+        Route::middleware('role:super_admin')->group(function () {
+            Route::get('/', [SchoolController::class, 'index']);
+            Route::post('/', [SchoolController::class, 'store']);
+            Route::delete('/{school}', [SchoolController::class, 'destroy']);
+            Route::post('/{school}/toggle-status', [SchoolController::class, 'toggleStatus']);
+        });
+        
+        // Routes accessible by both Super Admin and School Admin (for their own school)
+        Route::middleware('role:super_admin,school_admin')->group(function () {
+            Route::get('/{school}', [SchoolController::class, 'show']);
+            Route::put('/{school}', [SchoolController::class, 'update']);
+            Route::get('/{school}/statistics', [SchoolController::class, 'statistics']);
+        });
     });
 
     // Sign in as school admin (Super Admin only)
